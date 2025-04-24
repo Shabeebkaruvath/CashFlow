@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { auth } from '../firebase/firebase'
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+} from 'firebase/auth'
 import { LogIn } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
-  
 
- 
   const handleLogin = async (e) => {
     e.preventDefault()
     try {
@@ -22,12 +25,23 @@ export default function Login() {
   }
 
   const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider()
+
     try {
-      const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
-      navigate('/')
+      // Use redirect in standalone PWA mode
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        await signInWithRedirect(auth, provider)
+      } else {
+        await signInWithPopup(auth, provider)
+        navigate('/')
+      }
     } catch (error) {
-      alert(error.message)
+      if (error.code === 'auth/popup-blocked') {
+        // Fallback to redirect
+        await signInWithRedirect(auth, provider)
+      } else {
+        alert(error.message)
+      }
     }
   }
 

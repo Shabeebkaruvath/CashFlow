@@ -1,49 +1,41 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { auth } from '../firebase/firebase'
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { auth } from '../firebase/firebase';
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-} from 'firebase/auth'
-import { LogIn } from 'lucide-react'
+  setPersistence,
+  browserLocalPersistence,
+} from 'firebase/auth';
+import { LogIn } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const navigate = useNavigate()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      navigate('/')
+      await setPersistence(auth, browserLocalPersistence); // Ensure localStorage
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
     } catch (error) {
-      alert(error.message)
+      alert(error.message);
     }
-  }
+  };
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider()
-
     try {
-      // Use redirect in standalone PWA mode
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        await signInWithRedirect(auth, provider)
-      } else {
-        await signInWithPopup(auth, provider)
-        navigate('/')
-      }
+      await setPersistence(auth, browserLocalPersistence); // Ensure localStorage
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      navigate('/');
     } catch (error) {
-      if (error.code === 'auth/popup-blocked') {
-        // Fallback to redirect
-        await signInWithRedirect(auth, provider)
-      } else {
-        alert(error.message)
-      }
+      alert(error.message);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 px-4 py-8">
@@ -108,5 +100,5 @@ export default function Login() {
         </div>
       </div>
     </div>
-  )
+  );
 }

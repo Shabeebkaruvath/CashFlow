@@ -1,7 +1,5 @@
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from './firebase/firebase'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { useAuth } from './context/AuthContext'
 
 import Home from './pages/Home'
 import Settings from './pages/Settings'
@@ -13,22 +11,10 @@ import Login from './pages/Login'
 
 function App() {
   const location = useLocation()
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
+  const { user, loading } = useAuth()
 
   const authRoutes = ['/login', '/signup']
   const isAuthPage = authRoutes.includes(location.pathname)
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user && !isAuthPage) {
-        navigate('/login')
-      }
-      setLoading(false)
-    })
-
-    return () => unsubscribe()
-  }, [location.pathname])
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
@@ -39,12 +25,30 @@ function App() {
       {!isAuthPage && <Navbar />}
 
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/income" element={<Income />} />
-        <Route path="/expense" element={<Expense />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route 
+          path="/" 
+          element={user ? <Home /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/income" 
+          element={user ? <Income /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/expense" 
+          element={user ? <Expense /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/settings" 
+          element={user ? <Settings /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/login" 
+          element={!user ? <Login /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/signup" 
+          element={!user ? <Signup /> : <Navigate to="/" />} 
+        />
       </Routes>
     </div>
   )

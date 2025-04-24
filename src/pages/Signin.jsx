@@ -6,6 +6,7 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect
 } from 'firebase/auth'
 import { UserPlus } from 'lucide-react'
 
@@ -29,14 +30,31 @@ const handleSignup = async (e) => {
 
 
 const handleGoogleSignup = async () => {
-    try {
-      const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
-      navigate('/')  // ⬅ Redirect to home
-    } catch (error) {
-      alert(error.message)
+  const provider = new GoogleAuthProvider();
+  
+  try {
+    // Try popup first as it's more reliable across environments
+    await signInWithPopup(auth, provider);
+    navigate('/');
+  } catch (error) {
+    console.error("Auth error:", error.code, error.message);
+    
+    // Only use redirect as a fallback and with error handling
+    if (error.code === 'auth/popup-blocked' || 
+        error.code === 'auth/popup-closed-by-user') {
+      try {
+        // Store a flag that we're attempting redirect auth
+        sessionStorage.setItem('authRedirectAttempt', 'true');
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        alert("Authentication failed. Please try again or use a different browser.");
+        console.error("Redirect error:", redirectError);
+      }
+    } else {
+      alert(error.message);
     }
   }
+};
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 px-4 py-8">
       <div className="bg-white shadow-lg rounded-xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row">

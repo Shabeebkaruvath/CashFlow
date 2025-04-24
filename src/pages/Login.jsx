@@ -25,25 +25,31 @@ export default function Login() {
   }
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider()
-
+    const provider = new GoogleAuthProvider();
+    
     try {
-      // Use redirect in standalone PWA mode
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        await signInWithRedirect(auth, provider)
-      } else {
-        await signInWithPopup(auth, provider)
-        navigate('/')
-      }
+      // Try popup first as it's more reliable across environments
+      await signInWithPopup(auth, provider);
+      navigate('/');
     } catch (error) {
-      if (error.code === 'auth/popup-blocked') {
-        // Fallback to redirect
-        await signInWithRedirect(auth, provider)
+      console.error("Auth error:", error.code, error.message);
+      
+      // Only use redirect as a fallback and with error handling
+      if (error.code === 'auth/popup-blocked' || 
+          error.code === 'auth/popup-closed-by-user') {
+        try {
+          // Store a flag that we're attempting redirect auth
+          sessionStorage.setItem('authRedirectAttempt', 'true');
+          await signInWithRedirect(auth, provider);
+        } catch (redirectError) {
+          alert("Authentication failed. Please try again or use a different browser.");
+          console.error("Redirect error:", redirectError);
+        }
       } else {
-        alert(error.message)
+        alert(error.message);
       }
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 px-4 py-8">

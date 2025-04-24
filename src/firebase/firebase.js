@@ -1,5 +1,11 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -15,10 +21,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 👇 Add this line
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Auth persistence error:", error);
-});
+// Add multiple persistence types with fallbacks
+setPersistence(auth, browserLocalPersistence)
+  .catch(() => {
+    console.log("Falling back to session persistence");
+    return setPersistence(auth, browserSessionPersistence);
+  })
+  .catch((error) => {
+    console.error("Auth persistence error:", error);
+    return setPersistence(auth, inMemoryPersistence);
+  });
 
 const db = getFirestore(app);
 

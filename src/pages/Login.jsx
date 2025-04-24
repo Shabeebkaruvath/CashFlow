@@ -1,30 +1,33 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { auth } from '../firebase/firebase'
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { auth } from '../firebase/firebase';
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-} from 'firebase/auth'
-import { LogIn } from 'lucide-react'
+  setPersistence,
+  browserLocalPersistence,
+} from 'firebase/auth';
+import { LogIn } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const navigate = useNavigate()
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      navigate('/')
+      await setPersistence(auth, browserLocalPersistence); // Ensure localStorage
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
     } catch (error) {
-      alert(error.message)
+      alert(error.message);
     }
-  }
+  };
 
   const handleGoogleLogin = async () => {
+<<<<<<< HEAD
     const provider = new GoogleAuthProvider();
     
     try {
@@ -48,6 +51,15 @@ export default function Login() {
       } else {
         alert(error.message);
       }
+=======
+    try {
+      await setPersistence(auth, browserLocalPersistence); // Ensure localStorage
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      navigate('/');
+    } catch (error) {
+      alert(error.message);
+>>>>>>> 94b3c52f4e0f9495469f87ce74f8072ca78f99dd
     }
   };
 
@@ -114,5 +126,5 @@ export default function Login() {
         </div>
       </div>
     </div>
-  )
+  );
 }

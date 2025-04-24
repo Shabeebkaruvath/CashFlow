@@ -1,12 +1,17 @@
 import { useState } from 'react'
-import { Link ,useNavigate} from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { auth } from '../firebase/firebase'
 import {
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
+<<<<<<< HEAD
   signInWithRedirect
+=======
+  setPersistence,
+  browserLocalPersistence,
+>>>>>>> 94b3c52f4e0f9495469f87ce74f8072ca78f99dd
 } from 'firebase/auth'
 import { UserPlus } from 'lucide-react'
 
@@ -14,9 +19,9 @@ export default function Signup() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
   const navigate = useNavigate()
 
+<<<<<<< HEAD
 const handleSignup = async (e) => {
   e.preventDefault()
   try {
@@ -55,6 +60,31 @@ const handleGoogleSignup = async () => {
     }
   }
 };
+=======
+  const handleSignup = async (e) => {
+    e.preventDefault()
+    try {
+      await setPersistence(auth, browserLocalPersistence)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      await updateProfile(userCredential.user, { displayName: name })
+      navigate('/')
+    } catch (error) {
+      alert(error.message)
+    }
+  }
+
+  const handleGoogleSignup = async () => {
+    try {
+      await setPersistence(auth, browserLocalPersistence)
+      const provider = new GoogleAuthProvider()
+      await signInWithPopup(auth, provider)
+      navigate('/')
+    } catch (error) {
+      alert(error.message)
+    }
+  }
+
+>>>>>>> 94b3c52f4e0f9495469f87ce74f8072ca78f99dd
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 px-4 py-8">
       <div className="bg-white shadow-lg rounded-xl overflow-hidden w-full max-w-4xl flex flex-col md:flex-row">

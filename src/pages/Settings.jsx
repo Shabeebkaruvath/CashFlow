@@ -3,6 +3,7 @@ import { auth, db } from "../firebase/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import { X, AlertCircle ,Calendar } from "lucide-react";
 import {
   getIncomeCategories,
   getExpenseCategories,
@@ -23,7 +24,7 @@ export default function Settings() {
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDayPopup, setShowDayPopup] = useState(false);
-
+  const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [showPopup, setShowPopup] = useState(false);
 
   const navigate = useNavigate();
@@ -127,9 +128,14 @@ export default function Settings() {
     try {
       const bankRef = doc(db, "users", user.uid, "settings", "bank");
       await setDoc(bankRef, { initialBalance: Number(initialBalance) });
-      alert("Initial balance saved!");
+      
+      // Show toast instead of alert
+      setToast({ show: true, message: "Initial balance saved!", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
     } catch (error) {
       console.error("Failed to save balance:", error);
+      setToast({ show: true, message: "Failed to save balance", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
     }
   };
 
@@ -340,83 +346,206 @@ export default function Settings() {
       )}
 
       {showDayPopup && dailyData && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h3 className="text-lg font-bold mb-2">
-              Records for {selectedDate}
-            </h3>
-            <div>
-              <p className="text-green-600 font-semibold">
-                Income: ₹{dailyData.totalIncome || 0}
-              </p>
-              {dailyData.income?.map((entry, idx) => (
-                <p key={idx} className="text-sm">
-                  • ₹{entry.amount} - {entry.remark}
-                </p>
-              ))}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-96 max-w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold flex items-center">
+                <Calendar size={18} className="mr-2 text-gray-600" />
+                <span>{selectedDate}</span>
+              </h3>
+              <button
+                onClick={() => setShowDayPopup(false)}
+                className="text-gray-400 hover:text-gray-700 transition-colors"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <div>
-              <p className="text-red-500 font-semibold">
-                Expense: ₹{dailyData.totalExpense || 0}
-              </p>
-              {dailyData.expense?.map((entry, idx) => (
-                <p key={idx} className="text-sm">
-                  • ₹{entry.amount} - {entry.remark}
-                </p>
-              ))}
+
+            {/* Content */}
+            <div className="p-6 max-h-80 overflow-y-auto space-y-6">
+              {/* Income Section */}
+              <div>
+                <div className="flex items-center mb-3">
+                  <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                  <h4 className="text-gray-800 font-medium">Income</h4>
+                  <span className="ml-auto font-semibold text-green-600">
+                    ₹{dailyData.totalIncome?.toLocaleString() || 0}
+                  </span>
+                </div>
+
+                {dailyData.income?.length > 0 ? (
+                  <ul className="space-y-2 pl-2">
+                    {dailyData.income.map((entry, idx) => (
+                      <li
+                        key={idx}
+                        className="p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors flex justify-between"
+                      >
+                        <span className="text-gray-700">{entry.remark}</span>
+                        <span className="font-medium text-green-600 ml-2">
+                          ₹{entry.amount.toLocaleString()}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500 italic pl-5">
+                    No income recorded
+                  </p>
+                )}
+              </div>
+
+              {/* Expense Section */}
+              <div>
+                <div className="flex items-center mb-3">
+                  <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                  <h4 className="text-gray-800 font-medium">Expense</h4>
+                  <span className="ml-auto font-semibold text-red-600">
+                    ₹{dailyData.totalExpense?.toLocaleString() || 0}
+                  </span>
+                </div>
+
+                {dailyData.expense?.length > 0 ? (
+                  <ul className="space-y-2 pl-2">
+                    {dailyData.expense.map((entry, idx) => (
+                      <li
+                        key={idx}
+                        className="p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors flex justify-between"
+                      >
+                        <span className="text-gray-700">{entry.remark}</span>
+                        <span className="font-medium text-red-600 ml-2">
+                          ₹{entry.amount.toLocaleString()}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500 italic pl-5">
+                    No expenses recorded
+                  </p>
+                )}
+              </div>
             </div>
-            <p className="font-bold mt-2">
-              Net Total: ₹
-              {(dailyData.totalIncome || 0) - (dailyData.totalExpense || 0)}
-            </p>
-            <button
-              onClick={() => setShowDayPopup(false)}
-              className="w-full mt-4 bg-gray-200 py-2 rounded"
-            >
-              Close
-            </button>
+
+            {/* Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t">
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-medium text-gray-700">Net Total</span>
+                <span
+                  className={
+                    (dailyData.totalIncome || 0) -
+                      (dailyData.totalExpense || 0) >=
+                    0
+                      ? "text-lg font-bold text-green-600"
+                      : "text-lg font-bold text-red-600"
+                  }
+                >
+                  ₹
+                  {(
+                    (dailyData.totalIncome || 0) - (dailyData.totalExpense || 0)
+                  ).toLocaleString()}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowDayPopup(false)}
+                className="w-full py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {showPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h3 className="text-lg font-bold mb-4">
-              {selectedCategory} -{" "}
-              {entryType === "income" ? "Income" : "Expense"} Records
-            </h3>
-            {popupData.length === 0 ? (
-              <p>No records found for this category.</p>
-            ) : (
-              <ul className="space-y-2">
-                {popupData.map((item, index) => (
-                  <li key={index} className="border-b pb-1">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{item.date}</span>
-                      <span className="font-bold text-right">
-                        ₹{item.amount}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 text-sm">{item.remark}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-4 pt-2 border-t">
-              <p className="font-bold text-lg">
-                Total: ₹{popupData.reduce((sum, item) => sum + item.amount, 0)}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowPopup(false)}
-              className="w-full mt-4 bg-gray-200 py-2 rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+       <div className="bg-white rounded-xl shadow-xl w-96 max-w-full overflow-hidden">
+         {/* Header */}
+         <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+           <h3 className="text-lg font-semibold">
+             <span className="text-gray-800">{selectedCategory}</span>
+             <span className={entryType === "income" ? "text-green-600 ml-2" : "text-red-600 ml-2"}>
+               ({entryType === "income" ? "Income" : "Expense"})
+             </span>
+           </h3>
+           <button 
+             onClick={() => setShowPopup(false)}
+             className="text-gray-400 hover:text-gray-700 transition-colors"
+           >
+             <X size={20} />
+           </button>
+         </div>
+         
+         {/* Content */}
+         <div className="p-6 max-h-80 overflow-y-auto">
+           {popupData.length === 0 ? (
+             <div className="flex flex-col items-center justify-center py-6 text-gray-500">
+               <AlertCircle size={40} />
+               <p className="mt-2">No records found for this category.</p>
+             </div>
+           ) : (
+             <div>
+               {/* Group by date and render each date section */}
+               {Object.entries(
+                 popupData.reduce((acc, item) => {
+                   if (!acc[item.date]) {
+                     acc[item.date] = [];
+                   }
+                   acc[item.date].push(item);
+                   return acc;
+                 }, {})
+               ).sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA)).map(([date, items]) => (
+                 <div key={date} className="mb-6">
+                   <div className="flex items-center mb-2">
+                     <Calendar size={16} className="text-gray-600 mr-2" />
+                     <h4 className="font-medium text-gray-700">{date}</h4>
+                   </div>
+                   <ul className="space-y-2">
+                     {items.map((item, idx) => (
+                       <li key={idx} className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                         <div className="flex justify-between items-center">
+                           <span className="text-gray-700">{item.remark || "No description"}</span>
+                           <span className={entryType === "income" ? "font-medium text-green-600" : "font-medium text-red-600"}>
+                             ₹{item.amount.toLocaleString()}
+                           </span>
+                         </div>
+                       </li>
+                     ))}
+                   </ul>
+                   <div className="mt-2 text-right text-sm font-medium text-gray-600">
+                     Day total: ₹{items.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                   </div>
+                 </div>
+               ))}
+             </div>
+           )}
+         </div>
+         
+         {/* Footer */}
+         <div className="bg-gray-50 px-6 py-4 border-t">
+           <div className="flex justify-between items-center mb-4">
+             <span className="font-medium text-gray-700">Total</span>
+             <span className={entryType === "income" ? "text-lg font-bold text-green-600" : "text-lg font-bold text-red-600"}>
+               ₹{popupData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+             </span>
+           </div>
+           <button
+             onClick={() => setShowPopup(false)}
+             className="w-full py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+           >
+             Close
+           </button>
+         </div>
+       </div>
+     </div>
       )}
+      {/* Simple Toast */}
+{toast.show && (
+  <div className={`fixed bottom-4 left-0 right-0 mx-auto w-64 py-3 px-4 rounded-lg shadow-lg text-white text-center ${toast.type === "success" ? "bg-green-500" : "bg-red-500"}`}>
+    {toast.message}
+  </div>
+)}
+      
     </div>
   );
 }

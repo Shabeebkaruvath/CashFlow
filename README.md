@@ -1,4 +1,4 @@
-# 💸 CashFlow
+# 💸 CashFlow _ live priview(https://cashflow-six-pi.vercel.app/)
 
 A modern financial dashboard app to help you track your **income**, **expenses**, and manage your money smartly — all in one place.
 

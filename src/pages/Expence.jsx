@@ -3,7 +3,9 @@ import {
   addExpense,
   getTodayExpenses,
   addExpenseCategory,
-  getExpenseCategories
+  getExpenseCategories,
+  updateExpense,
+  deleteExpense
 } from '../utils/firestoreHelpers';
 import { auth } from '../firebase/firebase';
 
@@ -14,20 +16,25 @@ function Expenses() {
   const [formData, setFormData] = useState({ amount: '', remark: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [user, setUser] = useState(null); // Track user authentication state
+  const [user, setUser] = useState(null);
+  
+  // New state for edit functionality
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  const [confirmDeleteExpense, setConfirmDeleteExpense] = useState(null);
 
   // Load categories and expenses when the user is authenticated
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        setUser(user); // Set authenticated user
-        await loadCategoriesAndExpenses(); // Load data for authenticated user
+        setUser(user);
+        await loadCategoriesAndExpenses();
       } else {
-        setUser(null); // No user logged in, clear categories
+        setUser(null);
         setCategories([]);
       }
     });
-    return () => unsubscribe(); // Clean up on unmount
+    return () => unsubscribe();
   }, []);
 
   // Load categories and expenses from Firestore
@@ -38,7 +45,6 @@ function Expenses() {
         getTodayExpenses()
       ]);
 
-      // Assuming savedCategories is an array of strings based on getExpenseCategories implementation
       const merged = savedCategories.map(categoryName => {
         const match = todayExpenses.find(item => item.name === categoryName);
         return {
@@ -76,7 +82,7 @@ function Expenses() {
     }
 
     try {
-      await addExpenseCategory(name); // Removed user parameter
+      await addExpenseCategory(name);
       setCategories([...categories, { name, expenses: [] }]);
       setNewCategory('');
       setMessage({ text: 'Category added successfully!', type: 'success' });
@@ -103,14 +109,14 @@ function Expenses() {
     setIsSubmitting(true);
 
     try {
-      await addExpense(amount, categoryName, formData.remark); // Removed user parameter
+      await addExpense(amount, categoryName, formData.remark);
       
       // Update local state to show the new expense
       const updated = [...categories];
       updated[index].expenses.push({ 
         amount, 
         remark: formData.remark,
-        timestamp: new Date().toISOString() // Match the timestamp format used in addExpense
+        timestamp: new Date().toISOString()
       });
       setCategories(updated);
       setFormData({ amount: '', remark: '' });
@@ -124,6 +130,82 @@ function Expenses() {
     }
   };
 
+  // Handle editing an expense
+  const handleEditExpense = async () => {
+    if (!editingExpense) return;
+
+    const amount = parseFloat(formData.amount);
+    if (!amount || isNaN(amount)) {
+      setMessage({ text: 'Please enter a valid amount', type: 'error' });
+      return;
+    }
+
+    try {
+      // Update in Firestore
+      await updateExpense(
+        editingExpense.categoryName, 
+        editingExpense.index, 
+        amount, 
+        formData.remark
+      );
+
+      // Update local state
+      const updatedCategories = [...categories];
+      const categoryIndex = updatedCategories.findIndex(
+        cat => cat.name === editingExpense.categoryName
+      );
+      
+      if (categoryIndex !== -1) {
+        updatedCategories[categoryIndex].expenses[editingExpense.index] = {
+          amount,
+          remark: formData.remark,
+          timestamp: editingExpense.timestamp // Keep original timestamp
+        };
+        
+        setCategories(updatedCategories);
+        setEditingExpense(null);
+        setFormData({ amount: '', remark: '' });
+        setMessage({ text: 'Expense updated successfully!', type: 'success' });
+      }
+    } catch (error) {
+      console.error("Failed to update expense:", error);
+      setMessage({ text: `Error: ${error.message}`, type: 'error' });
+    }
+  };
+
+  // Handle deleting an expense
+  const handleDeleteExpense = async () => {
+    if (!confirmDeleteExpense) return;
+
+    try {
+      // Delete from Firestore
+      await deleteExpense(
+        confirmDeleteExpense.categoryName, 
+        confirmDeleteExpense.index
+      );
+
+      // Update local state
+      const updatedCategories = [...categories];
+      const categoryIndex = updatedCategories.findIndex(
+        cat => cat.name === confirmDeleteExpense.categoryName
+      );
+      
+      if (categoryIndex !== -1) {
+        updatedCategories[categoryIndex].expenses.splice(
+          confirmDeleteExpense.index, 
+          1
+        );
+        
+        setCategories(updatedCategories);
+        setConfirmDeleteExpense(null);
+        setMessage({ text: 'Expense deleted successfully!', type: 'success' });
+      }
+    } catch (error) {
+      console.error("Failed to delete expense:", error);
+      setMessage({ text: `Error: ${error.message}`, type: 'error' });
+    }
+  };
+
   // Get the total for each category
   const getCategoryTotal = (expenses) =>
     expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -133,6 +215,27 @@ function Expenses() {
     (total, cat) => total + getCategoryTotal(cat.expenses),
     0
   );
+
+  // Open edit modal for a specific expense
+  const openEditModal = (categoryName, expenseIndex) => {
+    const expense = categories
+      .find(cat => cat.name === categoryName)
+      .expenses[expenseIndex];
+    
+    setEditingExpense({
+      categoryName,
+      index: expenseIndex,
+      timestamp: expense.timestamp
+    });
+    
+    setFormData({
+      amount: expense.amount.toString(),
+      remark: expense.remark || ''
+    });
+    
+    // Close any open menus
+    setOpenMenuIndex(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -181,7 +284,7 @@ function Expenses() {
             </div>
           )}
 
-          {categories.map((category, index) => (
+          {categories.map((category, categoryIndex) => (
             <div
               key={category.name}
               className="bg-white p-4 shadow rounded-2xl space-y-3"
@@ -197,9 +300,61 @@ function Expenses() {
                 <p className="text-gray-500 italic">No expenses in this category yet</p>
               ) : (
                 <ul className="text-base text-gray-600 space-y-1">
-                  {category.expenses.map((e, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span>{e.remark || 'No remark'}</span>
+                  {category.expenses.map((e, expenseIndex) => (
+                    <li 
+                      key={expenseIndex} 
+                      className="flex justify-between items-center relative"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <button 
+                            onClick={() => 
+                              setOpenMenuIndex(
+                                openMenuIndex === `${categoryIndex}-${expenseIndex}` 
+                                  ? null 
+                                  : `${categoryIndex}-${expenseIndex}`
+                              )
+                            }
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <svg 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              className="h-5 w-5" 
+                              viewBox="0 0 20 20" 
+                              fill="currentColor"
+                            >
+                              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                            </svg>
+                          </button>
+                          
+                          {openMenuIndex === `${categoryIndex}-${expenseIndex}` && (
+                            <div className="absolute left-full top-0 ml-2 z-10 bg-white shadow-lg rounded-md border">
+                              <button 
+                                onClick={() => {
+                                  openEditModal(category.name, expenseIndex);
+                                  setOpenMenuIndex(null);
+                                }}
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setConfirmDeleteExpense({
+                                    categoryName: category.name,
+                                    index: expenseIndex
+                                  });
+                                  setOpenMenuIndex(null);
+                                }}
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-red-600"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <span>{e.remark || 'No remark'}</span>
+                      </div>
                       <span>₹{e.amount.toFixed(2)}</span>
                     </li>
                   ))}
@@ -207,13 +362,14 @@ function Expenses() {
               )}
 
               <button
-                onClick={() => setActiveCategoryIndex(index)}
+                onClick={() => setActiveCategoryIndex(categoryIndex)}
                 className="text-base text-blue-600 font-medium underline"
               >
                 + Add Expense
               </button>
 
-              {activeCategoryIndex === index && (
+              {/* Add Expense Modal */}
+              {activeCategoryIndex === categoryIndex && (
                 <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
                   <div className="bg-white p-6 rounded-xl w-80 shadow-lg space-y-4">
                     <h4 className="text-xl font-semibold text-gray-700">
@@ -246,11 +402,82 @@ function Expenses() {
                         Cancel
                       </button>
                       <button
-                        onClick={() => handleAddExpense(index)}
+                        onClick={() => handleAddExpense(categoryIndex)}
                         className={`px-3 py-1 ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600'} text-white rounded text-base`}
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? 'Adding...' : 'Add'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Expense Modal */}
+              {editingExpense && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+                  <div className="bg-white p-6 rounded-xl w-80 shadow-lg space-y-4">
+                    <h4 className="text-xl font-semibold text-gray-700">
+                      Edit Expense - {editingExpense.categoryName}
+                    </h4>
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      className="w-full border rounded px-3 py-2 text-base"
+                      value={formData.amount}
+                      onChange={(e) =>
+                        setFormData({ ...formData, amount: e.target.value })
+                      }
+                    />
+                    <input
+                      type="text"
+                      placeholder="Remark"
+                      className="w-full border rounded px-3 py-2 text-base"
+                      value={formData.remark}
+                      onChange={(e) =>
+                        setFormData({ ...formData, remark: e.target.value })
+                      }
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => setEditingExpense(null)}
+                        className="px-3 py-1 bg-gray-200 rounded text-base"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEditExpense}
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-base"
+                      >
+                        Update
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete Confirmation Modal */}
+              {confirmDeleteExpense && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+                  <div className="bg-white p-6 rounded-xl w-80 shadow-lg space-y-4">
+                    <h4 className="text-xl font-semibold text-gray-700">
+                      Confirm Delete
+                    </h4>
+                    <p className="text-gray-600">
+                      Are you sure you want to delete this expense?
+                    </p>
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => setConfirmDeleteExpense(null)}
+                        className="px-3 py-1 bg-gray-200 rounded text-base"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDeleteExpense}
+                        className="px-3 py-1 bg-red-600 text-white rounded text-base"
+                      >
+                        Delete
                       </button>
                     </div>
                   </div>

@@ -4,7 +4,9 @@ import {
   addIncome,
   getTodayIncomes,
   addIncomeCategory,
-  getIncomeCategories
+  getIncomeCategories,
+  updateIncome,
+  deleteIncome
 } from '../utils/firestoreHelpers';
 
 function Income() {
@@ -15,6 +17,10 @@ function Income() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [user, setUser] = useState(null); // Track user authentication state
+  const [editMode, setEditMode] = useState(false);
+  const [editItemInfo, setEditItemInfo] = useState(null); // {categoryIndex, incomeIndex, data}
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteItemInfo, setDeleteItemInfo] = useState(null); // {categoryIndex, incomeIndex}
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -121,6 +127,98 @@ function Income() {
     }
   };
 
+  const handleUpdateIncome = async () => {
+    if (!editItemInfo) return;
+    
+    const { categoryIndex, incomeIndex } = editItemInfo;
+    const amount = parseFloat(formData.amount);
+    
+    if (!amount || isNaN(amount)) {
+      setMessage({ text: 'Please enter a valid amount', type: 'error' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const categoryName = categories[categoryIndex].name;
+      const incomeId = categories[categoryIndex].incomes[incomeIndex].id; // Assuming each income has an id
+      
+      await updateIncome(incomeId, amount, categoryName, formData.remark);
+      
+      // Update local state
+      const updated = [...categories];
+      updated[categoryIndex].incomes[incomeIndex] = {
+        ...updated[categoryIndex].incomes[incomeIndex],
+        amount,
+        remark: formData.remark
+      };
+      
+      setCategories(updated);
+      setEditMode(false);
+      setEditItemInfo(null);
+      setActiveCategoryIndex(null);
+      setFormData({ amount: '', remark: '' });
+      setMessage({ text: 'Income updated successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Failed to update income:', error);
+      setMessage({ text: `Error: ${error.message}`, type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteIncome = async () => {
+    if (!deleteItemInfo) return;
+    
+    const { categoryIndex, incomeIndex } = deleteItemInfo;
+    setIsSubmitting(true);
+    
+    try {
+      const categoryName = categories[categoryIndex].name;
+      const incomeId = categories[categoryIndex].incomes[incomeIndex].id; // Assuming each income has an id
+      
+      await deleteIncome(incomeId, categoryName);
+      
+      // Update local state
+      const updated = [...categories];
+      updated[categoryIndex].incomes.splice(incomeIndex, 1);
+      
+      setCategories(updated);
+      setShowDeleteConfirm(false);
+      setDeleteItemInfo(null);
+      setMessage({ text: 'Income deleted successfully!', type: 'success' });
+    } catch (error) {
+      console.error('Failed to delete income:', error);
+      setMessage({ text: `Error: ${error.message}`, type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const startEditIncome = (categoryIndex, incomeIndex) => {
+    const income = categories[categoryIndex].incomes[incomeIndex];
+    setFormData({
+      amount: income.amount.toString(),
+      remark: income.remark || ''
+    });
+    setEditMode(true);
+    setEditItemInfo({ categoryIndex, incomeIndex });
+    setActiveCategoryIndex(categoryIndex);
+  };
+
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditItemInfo(null);
+    setActiveCategoryIndex(null);
+    setFormData({ amount: '', remark: '' });
+  };
+
+  const confirmDelete = (categoryIndex, incomeIndex) => {
+    setDeleteItemInfo({ categoryIndex, incomeIndex });
+    setShowDeleteConfirm(true);
+  };
+
   const getCategoryTotal = (incomes) =>
     incomes.reduce((sum, i) => sum + i.amount, 0);
 
@@ -194,16 +292,69 @@ function Income() {
           ) : (
             <ul className="text-base text-gray-600 space-y-1">
               {category.incomes.map((income, i) => (
-                <li key={i} className="flex justify-between">
+                <li key={i} className="flex justify-between items-center">
                   <span>{income.remark || 'No remark'}</span>
-                  <span className="text-green-600">₹{income.amount.toFixed(2)}</span>
+                  <div className="flex items-center">
+                    <span className="text-green-600 mr-3">₹{income.amount.toFixed(2)}</span>
+                    <div className="relative inline-block text-left">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          document.querySelectorAll('.dropdown-menu').forEach(el => {
+                            if (el.id !== `dropdown-${index}-${i}`) {
+                              el.classList.add('hidden');
+                            }
+                          });
+                          document.getElementById(`dropdown-${index}-${i}`).classList.toggle('hidden');
+                        }}
+                        className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                      </button>
+                      <div
+                        id={`dropdown-${index}-${i}`}
+                        className="dropdown-menu hidden absolute right-0 mt-2 w-24 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                      >
+                        <div className="py-1" role="menu" aria-orientation="vertical">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              document.getElementById(`dropdown-${index}-${i}`).classList.add('hidden');
+                              startEditIncome(index, i);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            role="menuitem"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              document.getElementById(`dropdown-${index}-${i}`).classList.add('hidden');
+                              confirmDelete(index, i);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                            role="menuitem"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
 
           <button
-            onClick={() => setActiveCategoryIndex(index)}
+            onClick={() => {
+              setActiveCategoryIndex(index);
+              setEditMode(false);
+              setFormData({ amount: '', remark: '' });
+            }}
             className="text-base text-green-600 font-medium underline"
           >
             + Add Income
@@ -213,7 +364,7 @@ function Income() {
             <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
               <div className="bg-white p-6 rounded-xl w-80 shadow-lg space-y-4">
                 <h4 className="text-xl font-semibold text-gray-700">
-                  Add Income - {category.name}
+                  {editMode ? `Edit Income - ${category.name}` : `Add Income - ${category.name}`}
                 </h4>
                 <input
                   type="number"
@@ -231,20 +382,22 @@ function Income() {
                 />
                 <div className="flex justify-end space-x-2">
                   <button
-                    onClick={() => setActiveCategoryIndex(null)}
+                    onClick={editMode ? cancelEdit : () => setActiveCategoryIndex(null)}
                     className="px-3 py-1 bg-gray-200 rounded text-base"
                     disabled={isSubmitting}
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={() => handleAddIncome(index)}
+                    onClick={editMode ? handleUpdateIncome : () => handleAddIncome(index)}
                     className={`px-3 py-1 ${
                       isSubmitting ? 'bg-green-400' : 'bg-green-600'
                     } text-white rounded text-base`}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Adding...' : 'Add'}
+                    {isSubmitting 
+                      ? (editMode ? 'Updating...' : 'Adding...') 
+                      : (editMode ? 'Update' : 'Add')}
                   </button>
                 </div>
               </div>
@@ -252,6 +405,47 @@ function Income() {
           )}
         </div>
       ))}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl w-80 shadow-lg space-y-4">
+            <h4 className="text-xl font-semibold text-gray-700">Confirm Delete</h4>
+            <p className="text-gray-600">
+              Are you sure you want to delete this income entry? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3 py-1 bg-gray-200 rounded text-base"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteIncome}
+                className={`px-3 py-1 ${
+                  isSubmitting ? 'bg-red-400' : 'bg-red-600'
+                } text-white rounded text-base`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Click outside to close all dropdowns */}
+      <div 
+        onClick={() => {
+          document.querySelectorAll('.dropdown-menu').forEach(el => {
+            el.classList.add('hidden');
+          });
+        }} 
+        className="fixed inset-0 z-0 hidden" 
+        id="dropdown-overlay"
+      ></div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   setDoc,
   updateDoc,
   arrayUnion,
+  arrayRemove,
   collection,
   getDocs,
   query,
@@ -102,6 +103,93 @@ const addExpense = async (amount, category, remark) => {
     }
   } catch (error) {
     console.error('Error adding expense:', error);
+  }
+};
+
+// New function to delete an income entry
+const deleteIncome = async (category, incomeToDelete) => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const date = getTodayDate();
+  const ref = doc(db, 'users', user.uid, 'records', date);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const incomes = data.income || [];
+    console.log(incomes);
+
+    // Remove the specific income and update total income
+    await updateDoc(ref, {
+      income: arrayRemove(incomeToDelete),
+      totalIncome: (data.totalIncome || 0) - incomeToDelete.amount
+    });
+  } catch (error) {
+    console.error('Error deleting income:', error);
+    throw error;
+  }
+};
+
+// New function to delete an expense
+const deleteExpense = async (category, expenseToDelete) => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const date = getTodayDate();
+  const ref = doc(db, 'users', user.uid, 'records', date);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const expenses = data.expense || [];
+    console.log(expenses);
+
+    // Remove the specific expense and update total expense
+    await updateDoc(ref, {
+      expense: arrayRemove(expenseToDelete),
+      totalExpense: (data.totalExpense || 0) - expenseToDelete.amount
+    });
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    throw error;
+  }
+};
+
+// New function to update an income entry
+const updateIncome = async (category, originalIncome, updatedIncome) => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const date = getTodayDate();
+  const ref = doc(db, 'users', user.uid, 'records', date);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const incomes = data.income || [];
+    console.log(incomes);
+
+    // Remove the original income
+    await updateDoc(ref, {
+      income: arrayRemove(originalIncome),
+      totalIncome: (data.totalIncome || 0) - originalIncome.amount
+    });
+
+    // Add the updated income
+    await updateDoc(ref, {
+      income: arrayUnion(updatedIncome),
+      totalIncome: (data.totalIncome || 0) + updatedIncome.amount
+    });
+  } catch (error) {
+    console.error('Error updating income:', error);
+    throw error;
   }
 };
 
@@ -228,7 +316,6 @@ const addIncomeCategory = async (categoryName) => {
   }
 };
 
-// Add the missing function for expense categories
 const addExpenseCategory = async (categoryName) => {
   const user = auth.currentUser;
   if (!user) return;
@@ -242,14 +329,54 @@ const addExpenseCategory = async (categoryName) => {
   }
 };
 
+// New function to update an existing expense
+const updateExpense = async (category, originalExpense, updatedExpense) => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const date = getTodayDate();
+  const ref = doc(db, 'users', user.uid, 'records', date);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const expenses = data.expense || [];
+    console.log(expenses);
+
+    // Calculate the difference in amounts
+    const amountDifference = updatedExpense.amount - originalExpense.amount;
+console.log(amountDifference);
+    // Remove the original expense
+    await updateDoc(ref, {
+      expense: arrayRemove(originalExpense),
+      totalExpense: (data.totalExpense || 0) - originalExpense.amount
+    });
+
+    // Add the updated expense
+    await updateDoc(ref, {
+      expense: arrayUnion(updatedExpense),
+      totalExpense: (data.totalExpense || 0) + updatedExpense.amount
+    });
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    throw error;
+  }
+};
+
 // Single consolidated export statement
 export { 
   addIncome, 
   addExpense, 
+  deleteIncome,
+  deleteExpense,
+  updateIncome,
+  updateExpense,
   getTodayIncomes, 
   getTodayExpenses, 
   addIncomeCategory,
-  addExpenseCategory,  // Added the missing export here
+  addExpenseCategory,
   getIncomeCategories,
   getExpenseCategories 
 };

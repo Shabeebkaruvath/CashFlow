@@ -1,4 +1,5 @@
-# 💸 CashFlow
+# 💸 CashFlow _ 
+# live priview (https://cashflow-six-pi.vercel.app/)
 
 A modern financial dashboard app to help you track your **income**, **expenses**, and manage your money smartly — all in one place.
 
@@ -31,7 +32,8 @@ A simple yet powerful personal finance tracker built with React and Firebase. Tr
 
 ## 📸 Screenshots
 
-Coming soon!
+![Cashflow](https://github.com/user-attachments/assets/d9dd56a9-bfbc-4904-ad35-fe90a49bede8)
+
 
 ## 🔧 Tech Stack
 

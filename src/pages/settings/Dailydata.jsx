@@ -88,29 +88,27 @@ export default function DayRecordChecker() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col p-00 m-0">
+    <div className="min-h-screen bg-gray-50 flex flex-col p-0 m-0">
       {/* App Bar */}
-
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-  <div className="max-w-6xl mx-auto">
-    <div className="flex items-center justify-between px-4 h-14">
-      <div className="flex items-center">
-        <button
-          onClick={() => navigate("/settings")}
-          className="p-2 rounded-full hover:bg-gray-100 flex items-center"
-          aria-label="Back"
-        >
-          <ArrowLeft size={20} className="text-gray-600" />
-        </button>
-        <h1 className="text-xl font-normal ml-3 text-gray-800 flex items-center gap-2">
-          <Calendar size={20} className="text-gray-600" />
-          Day Records
-        </h1>
-      </div>
-    </div>
-  </div>
-</header>
-
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate("/settings")}
+                className="p-2 rounded-full hover:bg-gray-100 flex items-center"
+                aria-label="Back"
+              >
+                <ArrowLeft size={20} className="text-gray-600" />
+              </button>
+              <h1 className="text-xl font-normal ml-3 text-gray-800 flex items-center gap-2">
+                <Calendar size={20} className="text-gray-600" />
+                Day Records
+              </h1>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
@@ -197,7 +195,7 @@ export default function DayRecordChecker() {
             <button
               onClick={fetchDayData}
               disabled={loading || !selectedDate}
-              className={`w-full flex items-center justify-center py-2.5 px-4 rounded-lg text-white font-medium transition ${
+              className={`w-full flex items-center justify-center py-2.5 px-4 rounded-lg           text-white font-medium transition ${
                 !selectedDate
                   ? "bg-blue-200 cursor-not-allowed"
                   : loading
@@ -218,111 +216,94 @@ export default function DayRecordChecker() {
         </section>
       </main>
 
-      {/* Modal */}
+      {/* Monochromatic Themed Modal */}
       {showDayPopup && dailyData && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setShowDayPopup(false)}
         >
           <div
-            className="bg-white w-full max-w-md rounded-lg shadow-xl overflow-hidden"
+            className="bg-gray-50 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-blue-600 text-white px-6 py-4">
+            <div className="bg-gray-800 text-gray-50 px-6 py-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium flex items-center">
-                  <Calendar size={18} className="mr-2" />
+                <h3 className="text-xl font-semibold flex items-center">
+                  <Calendar size={20} className="mr-2" />
                   {formatDate(selectedDate)}
                 </h3>
                 <button
                   onClick={() => setShowDayPopup(false)}
-                  className="text-white hover:bg-blue-700 rounded-full p-1"
+                  className="bg-gray-700 hover:bg-gray-600 rounded-full p-1 transition duration-150"
                 >
-                  <X size={20} />
+                  <X size={22} />
                 </button>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="px-6 py-4 max-h-96 overflow-y-auto">
-              {/* Summary */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-green-50 border border-green-100 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-sm text-green-700 mb-1">Income</span>
-                  <span className="text-xl font-medium text-green-700">
+            <div className="px-6 py-5 max-h-96 overflow-y-auto">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {/* Income */}
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 flex flex-col items-center">
+                  <span className="text-xs font-medium text-gray-700 mb-1 uppercase">
+                    Income
+                  </span>
+                  <span className="text-2xl font-bold text-gray-800">
                     ₹{dailyData.totalIncome?.toLocaleString() || 0}
                   </span>
                 </div>
-                <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex flex-col items-center">
-                  <span className="text-sm text-red-700 mb-1">Expense</span>
-                  <span className="text-xl font-medium text-red-700">
+
+                {/* Expense */}
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 flex flex-col items-center">
+                  <span className="text-xs font-medium text-gray-700 mb-1 uppercase">
+                    Expense
+                  </span>
+                  <span className="text-2xl font-bold text-gray-800">
                     ₹{dailyData.totalExpense?.toLocaleString() || 0}
+                  </span>
+                </div>
+
+                {/* Net Balance */}
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 flex flex-col items-center">
+                  <span className="text-xs font-medium text-gray-700 mb-1 uppercase">
+                    Net Balance
+                  </span>
+                  <span
+                    className={`text-2xl font-bold ${
+                      (dailyData.totalIncome || 0) -
+                        (dailyData.totalExpense || 0) >=
+                      0
+                        ? "text-green-700"
+                        : "text-red-700"
+                    }`}
+                  >
+                    ₹
+                    {(
+                      (dailyData.totalIncome || 0) -
+                      (dailyData.totalExpense || 0)
+                    ).toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              {/* Net Balance */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 flex justify-between items-center">
-                <span className="font-medium text-gray-700">Net Balance</span>
-                <span
-                  className={`text-lg font-medium ${
-                    (dailyData.totalIncome || 0) -
-                      (dailyData.totalExpense || 0) >=
-                    0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  ₹
-                  {(
-                    (dailyData.totalIncome || 0) - (dailyData.totalExpense || 0)
-                  ).toLocaleString()}
-                </span>
-              </div>
-
-              {/* Income List */}
+              {/* Expense Details Section */}
               <div className="mb-6">
-                <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                  Income Details
-                </h4>
-                {dailyData.income?.length > 0 ? (
-                  <ul className="divide-y divide-gray-100">
-                    {dailyData.income.map((entry, idx) => (
-                      <li
-                        key={idx}
-                        className="py-3 flex justify-between items-center"
-                      >
-                        <span className="text-gray-700">{entry.remark}</span>
-                        <span className="text-green-600 font-medium">
-                          ₹{entry.amount.toLocaleString()}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">
-                    No income recorded
-                  </p>
-                )}
-              </div>
-
-              {/* Expense List */}
-              <div>
-                <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
-                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <div className="w-3 h-3 bg-gray-800 rounded-full mr-2"></div>
                   Expense Details
                 </h4>
                 {dailyData.expense?.length > 0 ? (
-                  <ul className="divide-y divide-gray-100">
+                  <ul className="divide-y divide-gray-200">
                     {dailyData.expense.map((entry, idx) => (
                       <li
                         key={idx}
                         className="py-3 flex justify-between items-center"
                       >
                         <span className="text-gray-700">{entry.remark}</span>
-                        <span className="text-red-600 font-medium">
+                        <span className="text-gray-800 font-semibold">
                           ₹{entry.amount.toLocaleString()}
                         </span>
                       </li>
@@ -337,10 +318,10 @@ export default function DayRecordChecker() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="px-6 py-4 bg-gray-100 border-t border-gray-200">
               <button
                 onClick={() => setShowDayPopup(false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="w-full bg-gray-800 hover:bg-gray-700 text-gray-50 py-2 rounded-md font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2"
               >
                 Close
               </button>

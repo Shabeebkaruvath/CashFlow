@@ -9,6 +9,7 @@ import InitialBankBalance from "./settings/InitialBB";
 import DayRecordChecker from "./settings/Dailydata";
 import CategoryRecords from "./settings/Categories";
 import LogoutConfirm from "./settings/Logout";
+import Monthly from "./settings/Monthly";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -42,17 +43,31 @@ export default function Settings() {
       icon: "account_balance",
       description: "Set your starting account balance",
     },
+    
     {
       name: "Daily Records",
       path: "daily-records",
-      icon: "event_note",
+      icon: "calendar_today", // or "view_list"
       description: "Manage your daily transaction records",
     },
+
     {
       name: "Categories",
       path: "categories",
       icon: "category",
       description: "Customize expense and income categories",
+    },
+    {
+      name: "Monthly Chart",
+      path: "monthly_data",
+      icon: "bar_chart", // or "insert_chart"
+      description: "View monthly income vs expense chart",
+    },
+    {
+      name: "Download",
+      path: "download",
+      icon: "download",
+      description: "Download your financial data",
     },
     {
       name: "Logout",
@@ -72,9 +87,11 @@ export default function Settings() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Google-style top app bar with slight elevation */}
       <header className="bg-white py-3 px-4 md:px-6 shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center">
-           
-          <h1 className="text-xl font-bold text-gray-800">Settings</h1>
+        <div className="max-w-4xl mx-auto flex items-center justify-center m-2">
+          <span className="material-icons-outlined mr-1 text-black text-3xl">
+            settings
+          </span>
+          <h1 className="text-3xl font-light text-gray-800">Settings</h1>
         </div>
       </header>
 

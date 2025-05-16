@@ -12,7 +12,9 @@ import UserProfile from "./pages/settings/Profile";
 import InitialBankBalance from "./pages/settings/InitialBB";
 import DayRecordChecker from "./pages/settings/Dailydata";
 import CategoryRecords from "./pages/settings/Categories";
+import Downloads from "./pages/settings/Download";
 import LogoutConfirm from "./pages/settings/Logout";
+import Monthly from "./pages/settings/Monthly";
 import { useNavigate } from "react-router-dom";
 
 function App() {
@@ -66,12 +68,20 @@ function App() {
           element={user ? <UserProfile /> : <Navigate to="/login" />}
         />
         <Route
+          path="/settings/download"
+          element={user ? <Downloads /> : <Navigate to="/login" />}
+        />
+        <Route
           path="/settings/initial-balance"
           element={user ? <InitialBankBalance /> : <Navigate to="/login" />}
         />
         <Route
           path="/settings/daily-records"
           element={user ? <DayRecordChecker /> : <Navigate to="/login" />}
+        />
+         <Route
+          path="/settings/monthly_data"
+          element={user ? <Monthly /> : <Navigate to="/login" />}
         />
         <Route
           path="/settings/categories"

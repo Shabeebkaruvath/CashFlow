@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "../../firebase/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft    } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default function InitialBankBalance() {
   const [initialBalance, setInitialBalance] = useState("");
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   // Fetch initial balance on component mount
   useEffect(() => {
@@ -67,16 +67,17 @@ export default function InitialBankBalance() {
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between px-4 h-14">
             <div className="flex items-center">
-              <button 
+              <button
                 onClick={() => navigate("/settings")}
                 className="p-2 rounded-full hover:bg-gray-100 flex items-center"
                 aria-label="Back"
               >
                 <ArrowLeft size={20} className="text-gray-600" />
               </button>
-              <h1 className="text-xl font-normal ml-3 text-gray-800">Category Records</h1>
+              <h1 className="text-xl font-normal ml-3 text-gray-800">
+                Category Records
+              </h1>
             </div>
-             
           </div>
         </div>
       </header>
@@ -108,8 +109,9 @@ export default function InitialBankBalance() {
               <div className="relative">
                 <div className="flex items-center border-b border-gray-300 focus-within:border-blue-500 transition-colors group pb-1">
                   <span className="material-icons-outlined text-gray-400 group-focus-within:text-blue-500 mr-2">
-                    attach_money
+                    currency_rupee
                   </span>
+
                   <input
                     type="number"
                     value={initialBalance}

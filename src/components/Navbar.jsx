@@ -7,7 +7,6 @@ const navItems = [
   { name: "Expense", path: "/expense", icon: ArrowDownCircle },
   { name: "Settings", path: "/settings", icon: Settings },
 ];
-
 export default function Layout() {
   return (
     <>
@@ -15,7 +14,7 @@ export default function Layout() {
 <header className="fixed top-0 left-0 w-full bg-white shadow-sm z-50">
   <div className="max-w-screen-xl mx-auto flex items-center justify-between px-4 md:px-6 lg:px-8 py-3">
     <div className="flex items-center space-x-3">
-      <span className="text-blue-600 font-semibold text-2xl tracking-tight">CashFlow</span>
+      <span className="text-blue-600 text-3xl font-semibold"><a href="/">CashFlow</a></span>
     </div>
 
     {/* Desktop Navigation */}

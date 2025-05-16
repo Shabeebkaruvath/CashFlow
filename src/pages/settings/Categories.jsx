@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../firebase/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { X, AlertCircle, Calendar,ArrowLeft ,CheckCircle,Folder    } from "lucide-react";
+import {
+  X,
+  AlertCircle,
+  Calendar,
+  ArrowLeft,
+  CheckCircle,
+  Folder,
+} from "lucide-react";
 import {
   getIncomeCategories,
   getExpenseCategories,
@@ -43,7 +50,7 @@ export default function CategoryRecords() {
   useEffect(() => {
     const fetchCategoryData = async () => {
       if (!selectedCategory) return;
-      
+
       setCategoryLoading(true);
       try {
         const data = await getMonthlyEntriesByCategory(
@@ -102,28 +109,27 @@ export default function CategoryRecords() {
   };
 
   return (
- <div className="min-h-screen bg-gray-50 flex flex-col p-0 m-0">
+    <div className="min-h-screen bg-gray-50 flex flex-col p-0 m-0">
       {/* App Bar */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-  <div className="max-w-6xl mx-auto">
-    <div className="flex items-center justify-between px-4 h-14">
-      <div className="flex items-center">
-        <button 
-          onClick={() => navigate("/settings")}
-          className="p-2 rounded-full hover:bg-gray-100 flex items-center"
-          aria-label="Back"
-        >
-          <ArrowLeft size={20} className="text-gray-600" />
-        </button>
-        <h1 className="text-xl font-normal ml-3 text-gray-800 flex items-center gap-2">
-          <Folder size={20} className="text-gray-600" />
-          Category Records
-        </h1>
-      </div>
-    </div>
-  </div>
-</header>
-
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate("/settings")}
+                className="p-2 rounded-full hover:bg-gray-100 flex items-center"
+                aria-label="Back"
+              >
+                <ArrowLeft size={20} className="text-gray-600" />
+              </button>
+              <h1 className="text-xl font-normal ml-3 text-gray-800 flex items-center gap-2">
+                <Folder size={20} className="text-gray-600" />
+                Category Records
+              </h1>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <main className="flex-1 max-w-3xl mx-auto w-full">
         {/* Material Card */}
@@ -168,27 +174,25 @@ export default function CategoryRecords() {
               </div>
             ) : (
               <div className="space-y-1">
-                {(entryType === "income" ? incomeCategories : expenseCategories).map(
-                  (category) => (
-                    <button
-                      key={category}
-                      onClick={() => handleCategorySelect(category)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                        selectedCategory === category
-                          ? "bg-blue-50"
-                          : "hover:bg-gray-50"
-                      }`}
-                    >
-                      <span className="text-gray-800">{category}</span>
-                      {selectedCategory === category && (
-                        <CheckCircle
-                          size={20}
-                          className="text-blue-600"
-                        />
-                      )}
-                    </button>
-                  )
-                )}
+                {(entryType === "income"
+                  ? incomeCategories
+                  : expenseCategories
+                ).map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => handleCategorySelect(category)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      selectedCategory === category
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="text-gray-800">{category}</span>
+                    {selectedCategory === category && (
+                      <CheckCircle size={20} className="text-blue-600" />
+                    )}
+                  </button>
+                ))}
                 {(entryType === "income" ? incomeCategories : expenseCategories)
                   .length === 0 && (
                   <div className="py-6 text-center text-gray-500">
@@ -208,35 +212,44 @@ export default function CategoryRecords() {
 
       {/* Category Data Popup */}
       {showPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => setShowPopup(false)}>
-          <div className="bg-white w-full max-w-md rounded-lg shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          onClick={() => setShowPopup(false)}
+        >
+          <div
+            className="bg-gray-50 w-full max-w-md rounded-lg shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="bg-blue-600 text-white px-6 py-4">
+            <div className="bg-gray-800 text-gray-50 px-6 py-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">
-                  {selectedCategory} • {entryType === "income" ? "Income" : "Expense"}
+                  {selectedCategory} •{" "}
+                  {entryType === "income" ? "Income" : "Expense"}
                 </h3>
                 <button
                   onClick={() => setShowPopup(false)}
-                  className="text-white hover:bg-blue-700 rounded-full p-1"
+                  className="text-gray-50 hover:bg-gray-700 rounded-full p-1 transition duration-150"
                 >
                   <X size={20} />
                 </button>
               </div>
             </div>
-            
+
             {/* Modal Content */}
             <div className="px-6 py-4 max-h-96 overflow-y-auto">
               {categoryLoading ? (
                 <div className="flex justify-center items-center py-8">
-                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
                 </div>
               ) : popupData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                  <div className="bg-gray-100 p-3 rounded-full mb-3">
-                    <AlertCircle size={24} className="text-gray-400" />
+                  <div className="bg-gray-200 p-3 rounded-full mb-3">
+                    <AlertCircle size={24} className="text-gray-500" />
                   </div>
-                  <p className="text-gray-600">No records found for this category</p>
+                  <p className="text-gray-600">
+                    No records found for this category
+                  </p>
                 </div>
               ) : (
                 <div>
@@ -249,15 +262,22 @@ export default function CategoryRecords() {
                       return acc;
                     }, {})
                   )
-                    .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))
+                    .sort(
+                      ([dateA], [dateB]) => new Date(dateB) - new Date(dateA)
+                    )
                     .map(([date, items]) => (
                       <div key={date} className="mb-5">
                         <div className="flex items-center mb-2">
-                          <div className="bg-blue-50 p-1 rounded-full mr-2">
-                            <Calendar size={16} className="text-blue-600" />
+                          <div className="bg-gray-200 p-1 rounded-full mr-2">
+                            <Calendar size={16} className="text-gray-800" />
                           </div>
                           <h4 className="font-medium text-gray-800">
-                            {new Date(date).toLocaleDateString(undefined, {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}
+                            {new Date(date).toLocaleDateString(undefined, {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
                           </h4>
                         </div>
                         <div className="ml-7">
@@ -265,7 +285,7 @@ export default function CategoryRecords() {
                             {items.map((item, idx) => (
                               <li
                                 key={idx}
-                                className="py-2 px-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                                className="py-2 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                               >
                                 <div className="flex justify-between items-center">
                                   <span className="text-gray-800">
@@ -274,8 +294,8 @@ export default function CategoryRecords() {
                                   <span
                                     className={`font-medium ${
                                       entryType === "income"
-                                        ? "text-green-600"
-                                        : "text-red-600"
+                                        ? "text-green-700"
+                                        : "text-red-700"
                                     }`}
                                   >
                                     ₹{item.amount.toLocaleString()}
@@ -296,15 +316,15 @@ export default function CategoryRecords() {
                 </div>
               )}
             </div>
-            
+
             {/* Modal Footer */}
             {popupData.length > 0 && (
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="px-6 py-4 bg-gray-100 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                   <span className="font-medium text-gray-700">Total</span>
                   <span
                     className={`text-xl font-bold ${
-                      entryType === "income" ? "text-green-600" : "text-red-600"
+                      entryType === "income" ? "text-green-700" : "text-red-700"
                     }`}
                   >
                     ₹
@@ -315,7 +335,7 @@ export default function CategoryRecords() {
                 </div>
                 <button
                   onClick={() => setShowPopup(false)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-gray-50 py-2.5 rounded-lg font-medium transition shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2"
                 >
                   Close
                 </button>
@@ -325,9 +345,5 @@ export default function CategoryRecords() {
         </div>
       )}
     </div>
-
-
-
-
   );
 }

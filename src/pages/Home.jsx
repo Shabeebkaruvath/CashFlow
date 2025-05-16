@@ -69,11 +69,11 @@ function Home() {
       {/* Google-style app bar */}
       <div className="bg-white shadow-sm px-4 md:px-6 py-3">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center">
-            <span className="material-icons-outlined mr-3 text-blue-600">
+          <div className="flex items-center justify-center mt-2">
+            <span className="material-icons-outlined mr-3 text-shadow-black">
               dashboard
             </span>
-            <h1 className="text-xl font-normal text-gray-800">Dashboard</h1>
+            <h1 className="text-3xl font-light text-gray-800  ">Dashboard</h1>
           </div>
         </div>
       </div>

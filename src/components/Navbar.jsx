@@ -12,8 +12,10 @@ export default function Layout() {
   return (
     <>
       {/* Mobile Top Logo */}
-      <div className="md:hidden w-full text-center bg-white border-b border-gray-100 py-3 fixed top-0 left-0 z-50">
-        <h1 className="text-xl font-semibold text-blue-600">CashFlow</h1>
+      <div className="md:hidden w-full bg-white border-b border-gray-100 py-3 fixed top-0 left-0 z-50">
+        <div className="flex justify-between items-center px-4">
+          <h1 className="text-2xl font-semibold text-blue-600">CashFlow</h1>
+        </div>
       </div>
 
       {/* Desktop Top Navbar */}
@@ -66,43 +68,40 @@ export default function Layout() {
         <Outlet />
       </div>
 
-     {/* Mobile Bottom Navbar */}
-<nav className="md:hidden fixed bottom-0 left-0 w-full bg-white z-50 shadow-lg rounded-t-3xl overflow-hidden">
-  <div className="px-4 py-4">
-    <ul className="flex justify-around items-center">
-      {navItems.map((item) => (
-        <li key={item.name} className="flex-1 flex justify-center">
-          <NavLink
-            to={item.path}
-            className={() => {
-              const baseClasses = "flex items-center transition-all duration-200 ease-in-out";
-              return baseClasses;
-            }}
-          >
-            {({ isActive }) => (
-              isActive ? (
-                <div className="bg-blue-50 rounded-full px-6 py-3 flex items-center">
-                  <item.icon 
-                    size={24} 
-                    className="text-blue-600"
-                  />
-                  <span className="ml-2 text-sm font-medium text-blue-600">{item.name}</span>
-                </div>
-              ) : (
-                <div className="px-2 py-3">
-                  <item.icon 
-                    size={24} 
-                    className="text-gray-800"
-                  />
-                </div>
-              )
-            )}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  </div>
-</nav>
+      {/* Mobile Bottom Navbar */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white z-50 shadow-lg rounded-t-3xl overflow-hidden">
+        <div className="px-4 py-4">
+          <ul className="flex justify-around items-center">
+            {navItems.map((item) => (
+              <li key={item.name} className="flex-1 flex justify-center">
+                <NavLink
+                  to={item.path}
+                  className={() => {
+                    const baseClasses =
+                      "flex items-center transition-all duration-200 ease-in-out";
+                    return baseClasses;
+                  }}
+                >
+                  {({ isActive }) =>
+                    isActive ? (
+                      <div className="bg-blue-50 rounded-full px-6 py-3 flex items-center">
+                        <item.icon size={24} className="text-blue-600" />
+                        <span className="ml-2 text-sm font-medium text-blue-600">
+                          {item.name}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="px-2 py-3">
+                        <item.icon size={24} className="text-gray-800" />
+                      </div>
+                    )
+                  }
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
     </>
   );
 }

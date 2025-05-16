@@ -13,10 +13,12 @@ import InitialBankBalance from "./pages/settings/InitialBB";
 import DayRecordChecker from "./pages/settings/Dailydata";
 import CategoryRecords from "./pages/settings/Categories";
 import LogoutConfirm from "./pages/settings/Logout";
+import { useNavigate } from "react-router-dom";
 
 function App() {
   const location = useLocation();
   const { user, loading } = useAuth();
+    const navigate = useNavigate();
 
   const authRoutes = ["/login", "/signup"];
   const isAuthPage = authRoutes.includes(location.pathname);
@@ -30,11 +32,7 @@ function App() {
   }
 
   return (
-    <div
-      className={
-        isAuthPage ? "min-h-screen" : "pt-0  "
-      }
-    >
+    <div className={isAuthPage ? "min-h-screen" : "pt-0  "}>
       {!isAuthPage && <Navbar />}
 
       <Routes>
@@ -83,7 +81,7 @@ function App() {
           path="/settings/logout"
           element={
             user ? (
-              <LogoutConfirm onCancel={() => {}} />
+              <LogoutConfirm onCancel={() => navigate(-1)} /> // Go back one page
             ) : (
               <Navigate to="/login" />
             )

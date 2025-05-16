@@ -73,13 +73,8 @@ export default function Settings() {
       {/* Google-style top app bar with slight elevation */}
       <header className="bg-white py-3 px-4 md:px-6 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center">
-          <button
-            onClick={() => navigate("/")}
-            className="p-2 mr-4 rounded-full hover:bg-gray-100 text-gray-600"
-          >
-            <span className="material-icons-outlined">arrow_back</span>
-          </button>
-          <h1 className="text-xl font-normal text-gray-800">Settings</h1>
+           
+          <h1 className="text-xl font-bold text-gray-800">Settings</h1>
         </div>
       </header>
 

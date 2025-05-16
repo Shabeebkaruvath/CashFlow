@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../firebase/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { X, AlertCircle, Calendar,ArrowLeft ,CheckCircle,Search   } from "lucide-react";
+import { X, AlertCircle, Calendar,ArrowLeft ,CheckCircle,Folder    } from "lucide-react";
 import {
   getIncomeCategories,
   getExpenseCategories,
@@ -105,23 +105,25 @@ export default function CategoryRecords() {
  <div className="min-h-screen bg-gray-50 flex flex-col p-0 m-0">
       {/* App Bar */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center">
-              <button 
-                onClick={() => navigate("/settings")}
-                className="p-2 rounded-full hover:bg-gray-100 flex items-center"
-                aria-label="Back"
-              >
-                <ArrowLeft size={20} className="text-gray-600" />
-              </button>
-              <h1 className="text-xl font-normal ml-3 text-gray-800">Category Records</h1>
-            </div>
-            
-             
-          </div>
-        </div>
-      </header>
+  <div className="max-w-6xl mx-auto">
+    <div className="flex items-center justify-between px-4 h-14">
+      <div className="flex items-center">
+        <button 
+          onClick={() => navigate("/settings")}
+          className="p-2 rounded-full hover:bg-gray-100 flex items-center"
+          aria-label="Back"
+        >
+          <ArrowLeft size={20} className="text-gray-600" />
+        </button>
+        <h1 className="text-xl font-normal ml-3 text-gray-800 flex items-center gap-2">
+          <Folder size={20} className="text-gray-600" />
+          Category Records
+        </h1>
+      </div>
+    </div>
+  </div>
+</header>
+
 
       <main className="flex-1 max-w-3xl mx-auto w-full">
         {/* Material Card */}

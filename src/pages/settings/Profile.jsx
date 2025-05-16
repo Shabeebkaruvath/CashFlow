@@ -41,7 +41,8 @@ export default function UserProfile() {
   };
 
   return (
-    <section aria-labelledby="profile-heading" className="max-w-xl mx-auto w-full">
+ 
+      <section aria-labelledby="profile-heading" className="max-w-xl mx-auto w-full">
       {/* App Bar */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto">
@@ -54,14 +55,7 @@ export default function UserProfile() {
               >
                 <ArrowLeft size={20} className="text-gray-600" />
               </button>
-              <h1 className="text-xl font-normal ml-3 text-gray-800">Category Records</h1>
-            </div>
-             
-          </div>
-        </div>
-      </header>
-      {/* Header with Google-style typography */}
-      <div className="px-1 py-4 flex items-center">
+              <div className="px-1 py-4 flex items-center">
         <span className="material-icons-outlined mr-3 text-blue-600">account_circle</span>
         <h2
           id="profile-heading"
@@ -70,6 +64,13 @@ export default function UserProfile() {
           Profile Information
         </h2>
       </div>
+            </div>
+             
+          </div>
+        </div>
+      </header>
+      {/* Header with Google-style typography */}
+      
 
       {/* Card with Google-style elevation and rounded corners */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-shadow hover:shadow-md">
@@ -141,5 +142,7 @@ export default function UserProfile() {
         )}
       </div>
     </section>
+   
+  
   );
 }

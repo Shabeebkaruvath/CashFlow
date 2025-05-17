@@ -178,7 +178,7 @@ function Downloads() {
 
   return (
     <div
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-gray-50 m-5"
       style={{ fontFamily: "'Google Sans', 'Roboto', sans-serif" }}
     >
       {/* App Bar - Google Material Design 3 style */}

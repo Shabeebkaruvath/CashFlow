@@ -88,7 +88,7 @@ export default function DayRecordChecker() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col p-0 m-0">
+    <div className="min-h-screen bg-gray-50 flex flex-col p-0 m-5">
       {/* App Bar */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto">

@@ -61,7 +61,7 @@ export default function InitialBankBalance() {
   };
 
   return (
-    <div className="max-w-xl mx-auto w-full">
+    <div className="max-w-xl mx-auto w-full m-10">
       {/* App Bar - Google Material Design 3 style */}
       <header className="bg-white sticky top-0 z-20 h-16">
         <div className="max-w-6xl mx-auto">

@@ -9,7 +9,7 @@ import InitialBankBalance from "./settings/InitialBB";
 import DayRecordChecker from "./settings/Dailydata";
 import CategoryRecords from "./settings/Categories";
 import LogoutConfirm from "./settings/Logout";
-import Monthly from "./settings/Monthly";
+ 
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -57,12 +57,7 @@ export default function Settings() {
       icon: "category",
       description: "Customize expense and income categories",
     },
-    {
-      name: "Monthly Chart",
-      path: "monthly_data",
-      icon: "bar_chart", // or "insert_chart"
-      description: "View monthly income vs expense chart",
-    },
+     
     {
       name: "Download",
       path: "download",

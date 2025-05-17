@@ -42,106 +42,100 @@ export default function UserProfile() {
 
   return (
  
-      <section aria-labelledby="profile-heading" className="max-w-xl mx-auto w-full">
-      {/* App Bar */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between px-4 h-14">
-            <div className="flex items-center">
-              <button 
-                onClick={() => navigate("/settings")}
-                className="p-2 rounded-full hover:bg-gray-100 flex items-center"
-                aria-label="Back"
-              >
-                <ArrowLeft size={20} className="text-gray-600" />
-              </button>
-              <div className="px-1 py-4 flex items-center">
-        <span className="material-icons-outlined mr-3 text-blue-600">account_circle</span>
-        <h2
-          id="profile-heading"
-          className="text-xl font-normal text-gray-800"
+      
+<section aria-labelledby="profile-heading" className="max-w-xl mx-auto w-full">
+  {/* App Bar - Google Material Design 3 style */}
+  <header className="bg-white sticky top-0 z-20 h-16">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex items-center h-full px-4">
+        <button 
+          onClick={() => navigate("/settings")}
+          className="p-2 mr-2 rounded-full hover:bg-gray-100 flex items-center justify-center"
+          aria-label="Back"
         >
-          Profile Information
+          <ArrowLeft size={20} className="text-gray-600" />
+        </button>
+        <h2 id="profile-heading" className="text-xl font-normal text-gray-800">
+          Profile
         </h2>
       </div>
-            </div>
-             
-          </div>
-        </div>
-      </header>
-      {/* Header with Google-style typography */}
-      
+    </div>
+  </header>
 
-      {/* Card with Google-style elevation and rounded corners */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-shadow hover:shadow-md">
-        {loading ? (
-          <div className="p-8 flex flex-col items-center justify-center">
-            {/* Google-style loading spinner */}
-            <div className="w-6 h-6 rounded-full border-2 border-gray-200 border-t-blue-600 animate-spin mb-4"></div>
-            <p className="text-gray-600 text-sm">Loading user information</p>
-          </div>
-        ) : user ? (
-          <div className="divide-y divide-gray-100">
-            {/* User avatar header */}
-            <div className="px-6 py-5 flex items-center">
-              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white">
-                {user.displayName ? user.displayName.charAt(0).toUpperCase() : 
-                 user.email ? user.email.charAt(0).toUpperCase() : 
-                 <span className="material-icons-outlined">person</span>}
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg text-gray-800 font-medium">{user.displayName || "User"}</h3>
-                <p className="text-sm text-gray-500">{user.email || "No email provided"}</p>
-              </div>
-            </div>
-            
-            {/* Profile details with Google-style list */}
-            <div className="px-6 py-4">
-              {[
-                { 
-                  icon: "person",
-                  label: "Full Name", 
-                  value: user.displayName || "Not provided" 
-                },
-                { 
-                  icon: "email",
-                  label: "Email Address", 
-                  value: user.email || "Not provided" 
-                },
-                { 
-                  icon: "schedule",
-                  label: "Last Login", 
-                  value: user.metadata?.lastSignInTime
-                    ? formatDateForProfile(user.metadata.lastSignInTime)
-                    : "Not available"
-                },
-              ].map((item, index) => (
-                <div key={item.label} className={`flex items-start py-3 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
-                  <span className="material-icons-outlined text-gray-400 mr-4 mt-0.5 text-lg">{item.icon}</span>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{item.label}</p>
-                    <p className="text-sm text-gray-800">{item.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Action buttons footer with Google-style */}
-             
-          </div>
-        ) : (
-          <div className="p-8 flex flex-col items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <span className="material-icons-outlined text-gray-400 text-2xl">person_off</span>
-            </div>
-            <p className="text-gray-600 text-base mb-5">No user is currently logged in</p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-full text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2">
-              Sign In
-            </button>
-          </div>
-        )}
+  {/* Main Content with Material Design Card */}
+  <div className="px-4 py-6">
+    {loading ? (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 flex flex-col items-center justify-center">
+        {/* Google-style circular loading spinner */}
+        <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-blue-500 animate-spin mb-4"></div>
+        <p className="text-gray-600">Loading profile information...</p>
       </div>
-    </section>
+    ) : user ? (
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        {/* User header with large avatar */}
+        <div className="bg-blue-50 px-6 py-8 flex flex-col items-center border-b border-gray-100">
+          <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-medium mb-3">
+            {user.displayName ? user.displayName.charAt(0).toUpperCase() : 
+             user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <h3 className="text-xl text-gray-800 font-medium">{user.displayName || "User"}</h3>
+          <p className="text-sm text-gray-500 mt-1">{user.email || "No email provided"}</p>
+        </div>
+        
+        {/* Profile details with Google-style list */}
+        <div className="py-2">
+          {[
+            { 
+              icon: "person",
+              label: "Name", 
+              value: user.displayName || "Not provided" 
+            },
+            { 
+              icon: "email",
+              label: "Email", 
+              value: user.email || "Not provided" 
+            },
+            { 
+              icon: "schedule",
+              label: "Last sign-in", 
+              value: user.metadata?.lastSignInTime
+                ? formatDateForProfile(user.metadata.lastSignInTime)
+                : "Not available"
+            },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center px-6 py-4 hover:bg-gray-50">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-4">
+                <span className="material-icons-outlined text-gray-600">{item.icon}</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                <p className="text-sm text-gray-500">{item.value}</p>
+              </div>
+              <span className="material-icons-outlined text-gray-400">chevron_right</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Action button - Google style floating action button */}
+        <div className="px-6 py-4 flex justify-center border-t border-gray-100">
+          <button className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-8 rounded-full text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2">
+            Edit Profile
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="bg-white rounded-xl shadow-sm p-8 flex flex-col items-center justify-center">
+        <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
+          <span className="material-icons-outlined text-gray-400 text-3xl">person_off</span>
+        </div>
+        <p className="text-gray-700 text-lg mb-6">No user is currently signed in</p>
+        <button className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-8 rounded-full text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2">
+          Sign in
+        </button>
+      </div>
+    )}
+  </div>
+</section>
    
   
   );

@@ -1,110 +1,293 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { auth, db } from "../../firebase/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { ArrowLeft, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import * as _ from "lodash";
 
+// Since we can't import jsPDF directly, we'll load it dynamically
 function Downloads() {
+  // State to track if jsPDF is loaded
+  const [jsPDFLoaded, setJsPDFLoaded] = useState(false);
+
+  // Load jsPDF script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.async = true;
+    script.onload = () => setJsPDFLoaded(true);
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   const [exportMonth, setExportMonth] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleExport = async () => {
-    const user = auth.currentUser;
-    if (!user || !exportMonth) {
-      setError("Please select a month");
+    if (!jsPDFLoaded) {
+      setError(
+        "PDF generation is still loading. Please try again in a moment."
+      );
       return;
     }
 
-    const snapshot = await getDocs(
-      collection(db, "users", user.uid, "records")
-    );
-    const rows = [["Date", "Income", "Expense"]];
-    let found = false;
+    setLoading(true);
+    setError("");
 
-    snapshot.forEach((doc) => {
-      const [year, month] = doc.id.split("-");
-      const data = doc.data();
-
-      if (`${year}-${month}` === exportMonth) {
-        found = true;
-        rows.push([doc.id, data.totalIncome || 0, data.totalExpense || 0]);
+    try {
+      const user = auth.currentUser;
+      if (!user || !exportMonth) {
+        setError("Please select a month");
+        setLoading(false);
+        return;
       }
+
+      const snapshot = await getDocs(
+        collection(db, "users", user.uid, "records")
+      );
+      const records = [];
+      let found = false;
+
+      snapshot.forEach((doc) => {
+        const [year, month] = doc.id.split("-");
+        const data = doc.data();
+
+        if (`${year}-${month}` === exportMonth) {
+          found = true;
+          records.push({
+            date: doc.id,
+            income: data.totalIncome || 0,
+            expense: data.totalExpense || 0,
+          });
+        }
+      });
+
+      if (!found) {
+        setError("No records found for this month");
+        setLoading(false);
+        return;
+      }
+
+      // Generate PDF
+      generatePDF(records, exportMonth);
+    } catch (err) {
+      console.error("Export error:", err);
+      setError("An error occurred while exporting data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generatePDF = (records, month) => {
+    // Access the jspdf global object
+    const { jsPDF } = window.jspdf;
+
+    // Create a new PDF document
+    const doc = new jsPDF();
+
+    // Add title with Google-like styling
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(66, 133, 244); // Google blue
+    doc.text(`Finance Report`, 20, 20);
+
+    // Add subtitle
+    doc.setFontSize(14);
+    doc.setTextColor(95, 99, 104); // Google gray
+    doc.text(`Month: ${month}`, 20, 30);
+
+    // Add table headers
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(95, 99, 104);
+    doc.text("Date", 20, 45);
+    doc.text("Income ($)", 80, 45);
+    doc.text("Expense ($)", 140, 45);
+
+    // Add horizontal line with Google blue color
+    doc.setDrawColor(66, 133, 244);
+    doc.setLineWidth(0.5);
+    doc.line(20, 50, 190, 50);
+
+    // Add table rows
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    let y = 60;
+    records.forEach((record) => {
+      doc.text(record.date, 20, y);
+      doc.text(record.income.toFixed(2), 80, y);
+      doc.text(record.expense.toFixed(2), 140, y);
+      y += 10;
     });
 
-    if (!found) {
-      setError("No records found for this month");
-      return;
-    }
+    // Add line before total
+    doc.setDrawColor(66, 133, 244);
+    doc.line(20, y, 190, y);
+    y += 15;
 
-    // Convert to CSV and download
-    const csvContent = rows.map((e) => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `finance-${exportMonth}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Calculate totals
+    const totalIncome = _.sumBy(records, "income");
+    const totalExpense = _.sumBy(records, "expense");
+    const balance = totalIncome - totalExpense;
+
+    // Add total section
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(95, 99, 104);
+    doc.text("Summary", 20, y);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.text("Total Income:", 25, y);
+    doc.setTextColor(76, 175, 80); // Google green
+    doc.text(`${totalIncome.toFixed(2)}`, 80, y);
+    y += 10;
+
+    doc.setTextColor(95, 99, 104);
+    doc.text("Total Expenses:", 25, y);
+    doc.setTextColor(244, 67, 54); // Google red
+    doc.text(`${totalExpense.toFixed(2)}`, 80, y);
+    y += 10;
+
+    doc.setTextColor(95, 99, 104);
+    doc.text("Balance:", 25, y);
+
+    // Use green for positive balance, red for negative
+    if (balance >= 0) {
+      doc.setTextColor(76, 175, 80); // Google green
+    } else {
+      doc.setTextColor(244, 67, 54); // Google red
+    }
+    doc.text(`${balance.toFixed(2)}`, 80, y);
+
+    // Add footer
+    y = 270;
+    doc.setFontSize(8);
+    doc.setTextColor(95, 99, 104);
+    doc.text("Generated by CashFlow", 20, y);
+    const today = new Date().toLocaleDateString();
+    doc.text(`Generated on: ${today}`, 150, y);
+
+    // Save the PDF
+    doc.save(`finance-${month}.pdf`);
   };
 
   return (
     <div
-      className="min-h-screen bg-gray-50 p-6"
-      style={{ fontFamily: "'Roboto', sans-serif" }}
+      className="min-h-screen bg-gray-50"
+      style={{ fontFamily: "'Google Sans', 'Roboto', sans-serif" }}
     >
-      {/* App Bar */}
-      <div className="bg-white shadow-sm p-4 mb-6 flex items-center">
-        <button
-          onClick={() => navigate("/settings")}
-          className="flex items-center text-gray-700 hover:text-blue-500 transition-colors focus:outline-none"
-        >
-          <ArrowLeft style={{ fontSize: 24 }} className="mr-2" />
-          <span className="font-medium">Back</span>
-        </button>
-      </div>
-
-      {/* Header */}
-      <h1 className="text-center text-2xl font-semibold text-gray-800 mb-8">
-        Download Monthly Data Records
-      </h1>
-
-      {/* Card */}
-      <div className="bg-white p-6 rounded-lg shadow-md max-w-md mx-auto">
-        <div className="mb-5">
-          <label className="block text-gray-700 mb-1 font-medium">
-            Select Month
-          </label>
-          <input
-            type="month"
-            value={exportMonth}
-            onChange={(e) => {
-              setExportMonth(e.target.value);
-            }}
-            className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {error && (
-          <div className="mb-4 text-red-600 text-sm bg-red-50 p-3 rounded border border-red-200">
-            {error}
+      {/* App Bar - Google Material Design 3 style */}
+      <header className="bg-white sticky top-0 z-20 h-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center h-full px-4">
+            <button
+              onClick={() => navigate("/settings")}
+              className="p-2 mr-2 rounded-full hover:bg-gray-100 flex items-center justify-center"
+              aria-label="Back"
+            >
+              <span className="material-icons-outlined text-gray-600">
+                arrow_back
+              </span>
+            </button>
+            <h1 className="text-xl font-normal text-gray-800">Downloads</h1>
           </div>
-        )}
+        </div>
+      </header>
 
-        <button
-          onClick={handleExport}
-          disabled={!exportMonth}
-          className={`w-full py-2 rounded text-white transition-colors flex items-center justify-center space-x-2 
-    ${
-      exportMonth
-        ? "bg-blue-600 hover:bg-blue-700"
-        : "bg-blue-400 cursor-not-allowed"
-    }`}
-        >
-          <Download />
-          <span>Download</span>
-        </button>
+      {/* Content Area */}
+      <div className="max-w-md mx-auto pt-6 px-4 pb-8">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          {/* Card Header with icon */}
+          <div className="bg-blue-50 px-6 py-5 border-b border-gray-100 flex items-center">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+              <span className="material-icons-outlined text-blue-600">
+                description
+              </span>
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-gray-800">
+                Monthly Report
+              </h2>
+              <p className="text-gray-600 text-sm mt-0.5">
+                Export your financial data in PDF format
+              </p>
+            </div>
+          </div>
+
+          {/* Card Content */}
+          <div className="p-6">
+            <div className="mb-8">
+              <div className="relative pt-6">
+                <label className="absolute top-0 left-0 text-xs font-medium text-blue-600 tracking-wide">
+                  SELECT MONTH
+                </label>
+                <div className="flex items-center border-b border-gray-300 focus-within:border-blue-500 transition-colors pb-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center mr-3">
+                    <span className="material-icons-outlined text-gray-500">
+                      calendar_month
+                    </span>
+                  </div>
+                  <input
+                    type="month"
+                    value={exportMonth}
+                    onChange={(e) => {
+                      setExportMonth(e.target.value);
+                      setError("");
+                    }}
+                    className="w-full py-2 text-gray-700 bg-transparent outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-6 bg-red-50 rounded-lg p-4 flex items-center">
+                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
+                  <span className="material-icons-outlined text-red-600">
+                    error_outline
+                  </span>
+                </div>
+                <span className="text-red-700 text-sm">{error}</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleExport}
+              disabled={!exportMonth || loading || !jsPDFLoaded}
+              className={`w-full py-3 px-4 rounded-full text-white transition-colors flex items-center justify-center ${
+                exportMonth && !loading && jsPDFLoaded
+                  ? "bg-blue-500 hover:bg-blue-600"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin mr-3"></div>
+                  <span>Generating PDF...</span>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <span className="material-icons-outlined mr-2">download</span>
+                  <span>Download PDF</span>
+                </div>
+              )}
+            </button>
+
+            {!jsPDFLoaded && (
+              <div className="mt-4 flex items-center justify-center bg-gray-50 rounded-lg p-3">
+                <div className="w-5 h-5 rounded-full border-2 border-gray-300 border-t-blue-500 animate-spin mr-3"></div>
+                <span className="text-sm text-gray-500">
+                  Loading PDF generator...
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

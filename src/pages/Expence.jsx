@@ -288,12 +288,24 @@ function Expenses() {
 
       {user && (
         <>
-          <h2
-            className="text-3xl md:text-4xl font-bold text-center"
-            style={{ color: "#7295f6" }}
-          >
-            Total Expense: ₹{grandTotal.toFixed(2)}
-          </h2>
+           
+
+           <div className="flex flex-col items-center py-4">
+            <div className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">
+              Total Expense:
+            </div>
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3">
+                <span className="material-icons-outlined text-[#7295f6]">
+                  payments
+                </span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-light text-gray-800">
+                ₹{grandTotal.toFixed(2)}
+              </h2>
+            </div>
+            <div className="h-1 w-24 bg-[#7295f6] rounded-full mt-3"></div>
+          </div>
 
           {/* Add Category */}
           <div className="bg-white p-4 shadow-md rounded-2xl space-y-3">

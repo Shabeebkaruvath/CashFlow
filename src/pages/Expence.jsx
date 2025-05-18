@@ -20,12 +20,12 @@ function Expenses() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [user, setUser] = useState(null);
 
-  // New state for edit functionality
+  // State for edit functionality
   const [editingExpense, setEditingExpense] = useState(null);
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [confirmDeleteExpense, setConfirmDeleteExpense] = useState(null);
 
-  // New state for category management
+  // State for category management
   const [editingCategory, setEditingCategory] = useState(null);
   const [openCategoryMenuIndex, setOpenCategoryMenuIndex] = useState(null);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(null);
@@ -131,23 +131,18 @@ function Expenses() {
       await updateExpenseCategory(editingCategory.name, newName);
 
       // Update local state
-      const updatedCategories = [...categories];
-      const categoryIndex = updatedCategories.findIndex(
-        (cat) => cat.name === editingCategory.name
-      );
-
-      if (categoryIndex !== -1) {
-        // Update the category name
-        updatedCategories[categoryIndex].name = newName;
-
-        // Update category name in all expenses of this category
-        updatedCategories[categoryIndex].expenses = updatedCategories[
-          categoryIndex
-        ].expenses.map((expense) => ({
-          ...expense,
-          category: newName,
-        }));
-      }
+      const updatedCategories = categories.map((cat) => {
+        if (cat.name === editingCategory.name) {
+          return {
+            name: newName,
+            expenses: cat.expenses.map((expense) => ({
+              ...expense,
+              category: newName,
+            })),
+          };
+        }
+        return cat;
+      });
 
       setCategories(updatedCategories);
       setEditingCategory(null);
@@ -162,22 +157,23 @@ function Expenses() {
   };
 
   // Handle deleting a category
-  const handleDeleteCategory = async () => {
-    if (!confirmDeleteCategory) return;
+  // Update the handleDeleteCategory function to accept the category parameter
+  const handleDeleteCategory = async (category) => {
+    // First confirm deletion (you could set confirmDeleteCategory here)
+    setConfirmDeleteCategory(category);
 
+    // Or if you want direct deletion without confirmation:
     setIsSubmitting(true);
-
     try {
       // Delete category from Firestore
-      await deleteExpenseCategory(confirmDeleteCategory.name);
+      await deleteExpenseCategory(category.name);
 
       // Update local state
       const updatedCategories = categories.filter(
-        (cat) => cat.name !== confirmDeleteCategory.name
+        (cat) => cat.name !== category.name
       );
 
       setCategories(updatedCategories);
-      setConfirmDeleteCategory(null);
       setMessage({ text: "Category deleted successfully!", type: "success" });
     } catch (error) {
       console.error("Failed to delete category:", error);
@@ -204,16 +200,22 @@ function Expenses() {
     setIsSubmitting(true);
 
     try {
-      await addExpense(amount, categoryName, formData.remark);
+      const newExpenseId = await addExpense(
+        amount,
+        categoryName,
+        formData.remark
+      );
 
       // Update local state to show the new expense
       const updated = [...categories];
       updated[index].expenses.push({
+        id: newExpenseId,
         amount,
         remark: formData.remark,
-        timestamp: Date.now(), // Use numeric timestamp to match Firestore
+        timestamp: Date.now(),
         category: categoryName,
       });
+
       setCategories(updated);
       setFormData({ amount: "", remark: "" });
       setActiveCategoryIndex(null);
@@ -239,7 +241,7 @@ function Expenses() {
     setIsSubmitting(true);
 
     try {
-      // Find the original expense to edit
+      // Find the category and expense
       const categoryIndex = categories.findIndex(
         (cat) => cat.name === editingExpense.categoryName
       );
@@ -248,34 +250,29 @@ function Expenses() {
         throw new Error("Category not found");
       }
 
-      const originalExpense =
-        categories[categoryIndex].expenses[editingExpense.index];
+      const expense = categories[categoryIndex].expenses[editingExpense.index];
 
-      // Create updated expense data
       const updatedExpenseData = {
+        ...expense,
         amount,
         remark: formData.remark,
       };
 
-      // Update in Firestore with new function signature
-      const success = await updateExpense(originalExpense, updatedExpenseData);
+      // Update in Firestore
+      await updateExpense(expense, updatedExpenseData);
 
-      if (success) {
-        // Update local state
-        const updatedCategories = [...categories];
-        updatedCategories[categoryIndex].expenses[editingExpense.index] = {
-          ...originalExpense,
-          amount,
-          remark: formData.remark,
-        };
+      // Update local state
+      const updatedCategories = [...categories];
+      updatedCategories[categoryIndex].expenses[editingExpense.index] = {
+        ...expense,
+        amount,
+        remark: formData.remark,
+      };
 
-        setCategories(updatedCategories);
-        setEditingExpense(null);
-        setFormData({ amount: "", remark: "" });
-        setMessage({ text: "Expense updated successfully!", type: "success" });
-      } else {
-        throw new Error("Failed to update expense in database");
-      }
+      setCategories(updatedCategories);
+      setEditingExpense(null);
+      setFormData({ amount: "", remark: "" });
+      setMessage({ text: "Expense updated successfully!", type: "success" });
     } catch (error) {
       console.error("Failed to update expense:", error);
       setMessage({ text: `Error: ${error.message}`, type: "error" });
@@ -303,23 +300,19 @@ function Expenses() {
       const expenseToDelete =
         categories[categoryIndex].expenses[confirmDeleteExpense.index];
 
-      // Delete from Firestore with new function signature
-      const success = await deleteExpense(expenseToDelete);
+      // Delete from Firestore
+      await deleteExpense(expenseToDelete);
 
-      if (success) {
-        // Update local state
-        const updatedCategories = [...categories];
-        updatedCategories[categoryIndex].expenses.splice(
-          confirmDeleteExpense.index,
-          1
-        );
+      // Update local state
+      const updatedCategories = [...categories];
+      updatedCategories[categoryIndex].expenses.splice(
+        confirmDeleteExpense.index,
+        1
+      );
 
-        setCategories(updatedCategories);
-        setConfirmDeleteExpense(null);
-        setMessage({ text: "Expense deleted successfully!", type: "success" });
-      } else {
-        throw new Error("Failed to delete expense from database");
-      }
+      setCategories(updatedCategories);
+      setConfirmDeleteExpense(null);
+      setMessage({ text: "Expense deleted successfully!", type: "success" });
     } catch (error) {
       console.error("Failed to delete expense:", error);
       setMessage({ text: `Error: ${error.message}`, type: "error" });
@@ -349,7 +342,6 @@ function Expenses() {
     setEditingExpense({
       categoryName,
       index: expenseIndex,
-      timestamp: expense.timestamp,
     });
 
     setFormData({
@@ -374,28 +366,9 @@ function Expenses() {
     // Close any open menus
     setOpenCategoryMenuIndex(null);
   };
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        !event.target.closest(".category-menu") &&
-        !event.target.closest(".expense-menu") &&
-        !event.target.closest(".category-form") &&
-        !event.target.closest(".expense-form")
-      ) {
-        setOpenCategoryMenuIndex(null);
-        setOpenMenuIndex(null);
-        setEditingCategory(null);
-        setEditingExpense(null);
-        setConfirmDeleteCategory(null);
-        setConfirmDeleteExpense(null);
-      }
-    }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  // Handle clicks outside of menus to close them
+  
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-4xl mx-auto m-20 mt-2">
@@ -528,7 +501,7 @@ function Expenses() {
                           </button>
                           <button
                             onClick={() => {
-                              setConfirmDeleteCategory({
+                              handleDeleteCategory({
                                 name: category.name,
                               });
                               setOpenCategoryMenuIndex(null);
@@ -850,40 +823,40 @@ function Expenses() {
               )}
 
               {/* Delete Category Confirmation Modal */}
-              {confirmDeleteCategory && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl space-y-4">
-                    <h4 className="text-xl font-semibold text-red-600">
-                      Delete Category
-                    </h4>
-                    <p className="text-gray-600">
-                      Are you sure you want to delete the category "
-                      {confirmDeleteCategory.name}"? This will also delete all
-                      expenses in this category. This action cannot be undone.
-                    </p>
-                    <div className="flex justify-end space-x-3">
-                      <button
-                        onClick={() => setConfirmDeleteCategory(null)}
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-base font-medium transition-colors"
-                        disabled={isSubmitting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleDeleteCategory}
-                        className={`px-4 py-2 ${
-                          isSubmitting
-                            ? "bg-red-400 cursor-not-allowed"
-                            : "bg-red-600 hover:bg-red-700"
-                        } text-white rounded-lg text-base font-medium transition-colors`}
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? "Deleting..." : "Delete"}
-                      </button>
+                {confirmDeleteCategory && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl space-y-4">
+                      <h4 className="text-xl font-semibold text-red-600">
+                        Delete Category
+                      </h4>
+                      <p className="text-gray-600">
+                        Are you sure you want to delete the category "
+                        {confirmDeleteCategory.name}"? This will also delete all
+                        expenses in this category. This action cannot be undone.
+                      </p>
+                      <div className="flex justify-end space-x-3">
+                        <button
+                          onClick={() => setConfirmDeleteCategory(null)}
+                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-base font-medium transition-colors"
+                          disabled={isSubmitting}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleDeleteCategory}
+                          className={`px-4 py-2 ${
+                            isSubmitting
+                              ? "bg-red-400 cursor-not-allowed"
+                              : "bg-red-600 hover:bg-red-700"
+                          } text-white rounded-lg text-base font-medium transition-colors`}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           ))}
         </>

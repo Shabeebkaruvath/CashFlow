@@ -10,6 +10,8 @@ import {
   query,
   where,
   addDoc,
+  writeBatch,
+ 
 } from "firebase/firestore";
 
 const getTodayDate = () => new Date().toISOString().split("T")[0];
@@ -631,6 +633,249 @@ const addExpenseCategory = async (categoryName) => {
   }
 };
 
+export const deleteIncomeCategory = async (categoryName) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("No user is signed in");
+      return false;
+    }
+
+    const userId = user.uid;
+    const batch = writeBatch(db);
+
+    // Step 1: Delete the category from the categories collection
+    const categoriesRef = collection(db, "users", userId, "incomeCategories");
+    const categoryQuery = query(categoriesRef, where("name", "==", categoryName));
+    const categorySnapshot = await getDocs(categoryQuery);
+
+    if (categorySnapshot.empty) {
+      console.error("Category not found");
+      return false;
+    }
+
+    // Add category deletion to batch
+    categorySnapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // Step 2: Update any records that use this category
+    // Get all dates that might have records
+    const recordsRef = collection(db, "users", userId, "records");
+    const recordsSnapshot = await getDocs(recordsRef);
+
+    recordsSnapshot.forEach((recordDoc) => {
+      const recordData = recordDoc.data();
+      let recordUpdated = false;
+      
+      // Check if this record has incomes to update
+      if (recordData.income && Array.isArray(recordData.income)) {
+        const updatedIncomes = recordData.income.filter(item => item.category !== categoryName);
+        
+        // If we filtered out any items, we need to update the record
+        if (updatedIncomes.length !== recordData.income.length) {
+          recordUpdated = true;
+          console.log("recordUpdated", recordUpdated);
+          // Recalculate the total income
+          const newTotalIncome = updatedIncomes.reduce(
+            (sum, item) => sum + Number(item.amount), 0
+          );
+          
+          // Update the record with new data
+          batch.update(recordDoc.ref, {
+            income: updatedIncomes,
+            totalIncome: newTotalIncome
+          });
+        }
+      }
+    });
+
+    // Execute the batch
+    await batch.commit();
+    console.log(`Income category "${categoryName}" successfully deleted from database.`);
+    return true;
+  } catch (error) {
+    console.error("Error deleting income category:", error);
+    throw error;
+  }
+};
+
+export const updateIncomeCategory = async (oldCategoryName, newCategoryName) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("No user is signed in");
+      return false; 
+    }
+
+    if (!oldCategoryName || !newCategoryName || oldCategoryName === newCategoryName) {
+      console.error("Invalid category names provided");
+      return false;
+    }
+
+    const userId = user.uid;
+    const batch = writeBatch(db);
+
+    // Step 1: Check if new category name already exists
+    const existingCategories = await getIncomeCategories();
+    if (existingCategories.includes(newCategoryName)) {
+      console.error(`Income category "${newCategoryName}" already exists.`);
+      return false;
+    }
+
+    // Step 2: Find the category document to update
+    const categoriesRef = collection(db, "users", userId, "incomeCategories");
+    const q = query(categoriesRef, where("name", "==", oldCategoryName));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      console.error(`Category "${oldCategoryName}" not found`);
+      return false;
+    }
+
+    // Update the category name in the categories collection
+    snapshot.forEach(docSnap => {
+      batch.update(docSnap.ref, { name: newCategoryName });
+    });
+
+    // Step 3: Update any records that use this category
+    const recordsRef = collection(db, "users", userId, "records");
+    const recordsSnapshot = await getDocs(recordsRef);
+
+    recordsSnapshot.forEach((recordDoc) => {
+      const recordData = recordDoc.data();
+      let recordUpdated = false;
+      
+      // Check if this record has incomes to update
+      if (recordData.income && Array.isArray(recordData.income)) {
+        const updatedIncomes = recordData.income.map(item => {
+          if (item.category === oldCategoryName) {
+            recordUpdated = true;
+            return { ...item, category: newCategoryName };
+          }
+          return item;
+        });
+        
+        // If we updated any items, update the record
+        if (recordUpdated) {
+          batch.update(recordDoc.ref, {
+            income: updatedIncomes
+          });
+        }
+      }
+    });
+
+    // Execute the batch
+    await batch.commit();
+    console.log(`Income category "${oldCategoryName}" successfully updated to "${newCategoryName}" in database.`);
+    return true;
+  } catch (error) {
+    console.error("Error updating income category:", error);
+    throw error;
+  }
+};
+export const deleteExpenseCategory = async (categoryName) => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const userId = user.uid;
+    const batch = writeBatch(db);
+
+    // Step 1: Delete the category from the categories collection
+    const categoriesRef = collection(db, "users", userId, "expenseCategories");
+    const categoryQuery = query(
+      categoriesRef,
+      where("name", "==", categoryName)
+    );
+    const categorySnapshot = await getDocs(categoryQuery);
+
+    if (categorySnapshot.empty) {
+      throw new Error("Category not found");
+    }
+
+    // Add category deletion to batch
+    categorySnapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // Step 2: Delete all expenses in that category
+    const expensesRef = collection(db, "users", userId, "expenses");
+    const expensesQuery = query(
+      expensesRef,
+      where("category", "==", categoryName)
+    );
+    const expenseSnapshot = await getDocs(expensesQuery);
+
+    // Add expense deletions to batch
+    expenseSnapshot.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // Execute the batch write
+    await batch.commit();
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    throw error;
+  }
+};
+
+export const updateExpenseCategory = async (oldCategoryName, newCategoryName) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+
+    if (!oldCategoryName || !newCategoryName || oldCategoryName === newCategoryName) {
+      throw new Error("Invalid category names provided");
+    }
+
+    const userId = user.uid;
+    const batch = writeBatch(db);
+
+    // Find the expense category document to update
+    const categoriesRef = collection(db, "users", userId, "expenseCategories");
+    const q = query(categoriesRef, where("name", "==", oldCategoryName));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) throw new Error(`Category "${oldCategoryName}" not found`);
+
+    // Update the category name in the category collection
+    snapshot.forEach(docSnap => {
+      batch.update(docSnap.ref, { name: newCategoryName });
+    });
+
+    // Update the category name in the current month's expenses
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const monthKey = `${year}-${month}`;
+    const expensesDocRef = doc(db, "users", userId, "expenses", monthKey);
+    const expensesDoc = await getDoc(expensesDocRef);
+
+    if (expensesDoc.exists()) {
+      const expensesData = expensesDoc.data();
+
+      if (expensesData[oldCategoryName]) {
+        expensesData[newCategoryName] = expensesData[oldCategoryName];
+        delete expensesData[oldCategoryName];
+        batch.set(expensesDocRef, expensesData);
+      }
+    }
+
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Error updating category:", error);
+    throw error;
+  }
+};
+
+
 export {
   addIncome,
   addExpense,
@@ -644,4 +889,5 @@ export {
   addExpenseCategory,
   getIncomeCategories,
   getExpenseCategories,
+  ensureCategoryExists,
 };

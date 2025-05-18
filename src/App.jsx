@@ -12,8 +12,10 @@ import UserProfile from "./pages/settings/Profile";
 import InitialBankBalance from "./pages/settings/InitialBB";
 import DayRecordChecker from "./pages/settings/Dailydata";
 import CategoryRecords from "./pages/settings/Categories";
+import HistoricalData from "./pages/settings/HistoricalData";
 import Downloads from "./pages/settings/Download";
 import LogoutConfirm from "./pages/settings/Logout";
+
  
 import { useNavigate } from "react-router-dom";
 
@@ -84,6 +86,11 @@ function App() {
           path="/settings/categories"
           element={user ? <CategoryRecords /> : <Navigate to="/login" />}
         />
+        <Route
+          path="/settings/history-data"
+          element={user ? <HistoricalData /> : <Navigate to="/login" />}
+        />
+        HistoricalData
         <Route
           path="/settings/logout"
           element={

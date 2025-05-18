@@ -7,7 +7,9 @@ import {
   getIncomeCategories,
   updateIncome,
   deleteIncome,
-} from "../utils/firestoreHelpers"; // Assuming this path points to your 'firebase_crud_fix' code
+  updateIncomeCategory,
+  deleteIncomeCategory,
+} from "../utils/firestoreHelpers"; // Need to add these two functions in your firestoreHelpers
 
 function Income() {
   const [categories, setCategories] = useState([]);
@@ -21,6 +23,11 @@ function Income() {
   const [editItemInfo, setEditItemInfo] = useState(null); // {categoryIndex, incomeIndex}
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteItemInfo, setDeleteItemInfo] = useState(null); // {categoryIndex, incomeIndex}
+  const [editCategoryMode, setEditCategoryMode] = useState(false);
+  const [editCategoryIndex, setEditCategoryIndex] = useState(null);
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [showCategoryDeleteConfirm, setShowCategoryDeleteConfirm] = useState(false);
+  const [deleteCategoryIndex, setDeleteCategoryIndex] = useState(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -97,6 +104,100 @@ function Income() {
       console.error("Error saving category:", err);
       setMessage({ text: "Error saving category", type: "error" });
     }
+  };
+
+  const handleEditCategory = async () => {
+    if (editCategoryIndex === null) return;
+    
+    const newName = editCategoryName.trim();
+    const oldName = categories[editCategoryIndex].name;
+    
+    if (!newName) {
+      setMessage({ text: "Category name cannot be empty", type: "error" });
+      return;
+    }
+    
+    if (newName === oldName) {
+      setEditCategoryMode(false);
+      setEditCategoryIndex(null);
+      setEditCategoryName("");
+      return;
+    }
+    
+    if (categories.some((cat, index) => 
+      index !== editCategoryIndex && cat.name.toLowerCase() === newName.toLowerCase()
+    )) {
+      setMessage({ text: "Category name already exists", type: "error" });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Call the updateIncomeCategory function from firestoreHelpers
+      await updateIncomeCategory(oldName, newName);
+      
+      // Update local state
+      const updatedCategories = [...categories];
+      updatedCategories[editCategoryIndex] = {
+        ...updatedCategories[editCategoryIndex],
+        name: newName
+      };
+      
+      setCategories(updatedCategories);
+      setEditCategoryMode(false);
+      setEditCategoryIndex(null);
+      setEditCategoryName("");
+      setMessage({ text: "Category updated successfully!", type: "success" });
+    } catch (err) {
+      console.error("Error updating category:", err);
+      setMessage({ text: "Error updating category", type: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (deleteCategoryIndex === null) return;
+    
+    const categoryName = categories[deleteCategoryIndex].name;
+    setIsSubmitting(true);
+    
+    try {
+      // Call the deleteIncomeCategory function from firestoreHelpers
+      await deleteIncomeCategory(categoryName);
+      
+      // Update local state
+      const updatedCategories = [...categories];
+      updatedCategories.splice(deleteCategoryIndex, 1);
+      
+      setCategories(updatedCategories);
+      setShowCategoryDeleteConfirm(false);
+      setDeleteCategoryIndex(null);
+      setMessage({ text: "Category deleted successfully!", type: "success" });
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      setMessage({ text: "Error deleting category", type: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const startEditCategory = (index) => {
+    setEditCategoryIndex(index);
+    setEditCategoryName(categories[index].name);
+    setEditCategoryMode(true);
+  };
+
+  const confirmDeleteCategory = (index) => {
+    setDeleteCategoryIndex(index);
+    setShowCategoryDeleteConfirm(true);
+  };
+
+  const cancelEditCategory = () => {
+    setEditCategoryMode(false);
+    setEditCategoryIndex(null);
+    setEditCategoryName("");
   };
 
   const handleAddIncome = async (categoryIndex) => {
@@ -303,30 +404,24 @@ function Income() {
     0
   );
 
-  // Click outside dropdowns handler
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      const dropdowns = document.querySelectorAll(".dropdown-menu");
-      let clickedInsideDropdown = false;
-      dropdowns.forEach((dropdown) => {
-        if (
-          dropdown.contains(event.target) ||
-          event.target.closest(".relative.inline-block.text-left button")
-        ) {
-          clickedInsideDropdown = true;
-        }
-      });
+  const handleClickOutside = (event) => {
+    document.querySelectorAll(".dropdown-menu").forEach((dropdown) => {
+      const wrapper = dropdown.closest(".relative.inline-block.text-left");
 
-      if (!clickedInsideDropdown) {
-        dropdowns.forEach((el) => el.classList.add("hidden"));
+      if (!wrapper.contains(event.target)) {
+        dropdown.classList.add("hidden");
       }
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
+    });
+  };
+
+  document.addEventListener("click", handleClickOutside);
+  return () => document.removeEventListener("click", handleClickOutside);
+}, []);
+
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="space-y-6 p-4 md:p-6 max-w-4xl mx-auto m-20 mt-2">
       {message.text && (
         <div
           className={`p-3 rounded-lg text-center transition-opacity duration-300 ${
@@ -403,9 +498,82 @@ function Income() {
                 <h3 className="text-2xl font-bold text-gray-800">
                   {category.name}
                 </h3>
-                <span className="font-bold text-2xl text-green-500">
-                  ₹{getCategoryTotal(category.incomes).toFixed(2)}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-2xl text-green-500">
+                    ₹{getCategoryTotal(category.incomes).toFixed(2)}
+                  </span>
+                  <div className="relative inline-block text-left">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        document
+                          .querySelectorAll(".dropdown-menu")
+                          .forEach((el) => {
+                            if (el.id !== `category-dropdown-${index}`) {
+                              el.classList.add("hidden");
+                            }
+                          });
+                        const currentDropdown = document.getElementById(
+                          `category-dropdown-${index}`
+                        );
+                        if (currentDropdown)
+                          currentDropdown.classList.toggle("hidden");
+                      }}
+                      className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                      aria-label="Category Options"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                      </svg>
+                    </button>
+                    <div
+                      id={`category-dropdown-${index}`}
+                      className="dropdown-menu hidden absolute right-0 mt-2 w-28 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20" // Increased z-index
+                    >
+                      <div
+                        className="py-1"
+                        role="menu"
+                        aria-orientation="vertical"
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentDropdown = document.getElementById(
+                              `category-dropdown-${index}`
+                            );
+                            if (currentDropdown)
+                              currentDropdown.classList.add("hidden");
+                            startEditCategory(index);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                          role="menuitem"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentDropdown = document.getElementById(
+                              `category-dropdown-${index}`
+                            );
+                            if (currentDropdown)
+                              currentDropdown.classList.add("hidden");
+                            confirmDeleteCategory(index);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 hover:text-red-800"
+                          role="menuitem"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {category.incomes?.length === 0 ? (
@@ -633,6 +801,79 @@ function Income() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal */}
+      {editCategoryMode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl space-y-4">
+            <h4 className="text-xl font-semibold text-gray-800">
+              Edit Category
+            </h4>
+            <input
+              type="text"
+              placeholder="Category name"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              value={editCategoryName}
+              onChange={(e) => setEditCategoryName(e.target.value)}
+            />
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelEditCategory}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-base font-medium transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditCategory}
+                className={`px-4 py-2 ${
+                  isSubmitting
+                    ? "bg-green-400 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700"
+                } text-white rounded-lg text-base font-medium transition-colors`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Updating..." : "Update Category"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Delete Confirmation Modal */}
+      {showCategoryDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl space-y-4">
+            <h4 className="text-xl font-semibold text-gray-800">
+              Confirm Category Deletion
+            </h4>
+            <p className="text-gray-600">
+              Are you sure you want to delete the "{categories[deleteCategoryIndex]?.name}" category? 
+              This will remove all income entries in this category. This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowCategoryDeleteConfirm(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-base font-medium transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteCategory}
+                className={`px-4 py-2 ${
+                  isSubmitting
+                    ? "bg-red-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700"
+                } text-white rounded-lg text-base font-medium transition-colors`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Deleting..." : "Delete Category"}
               </button>
             </div>
           </div>

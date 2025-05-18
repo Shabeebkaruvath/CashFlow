@@ -6,6 +6,8 @@ import {
   getExpenseCategories,
   updateExpense,
   deleteExpense,
+  updateExpenseCategory,
+  deleteExpenseCategory,
 } from "../utils/firestoreHelpers";
 import { auth } from "../firebase/firebase";
 
@@ -22,6 +24,12 @@ function Expenses() {
   const [editingExpense, setEditingExpense] = useState(null);
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [confirmDeleteExpense, setConfirmDeleteExpense] = useState(null);
+
+  // New state for category management
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [openCategoryMenuIndex, setOpenCategoryMenuIndex] = useState(null);
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(null);
+  const [categoryFormData, setCategoryFormData] = useState({ name: "" });
 
   // Load categories and expenses when the user is authenticated
   useEffect(() => {
@@ -94,6 +102,91 @@ function Expenses() {
     }
   };
 
+  // Handle editing a category
+  const handleEditCategory = async () => {
+    if (!editingCategory) return;
+
+    const newName = categoryFormData.name.trim();
+    if (!newName) {
+      setMessage({ text: "Category name cannot be empty", type: "error" });
+      return;
+    }
+
+    // Check if the new name already exists (excluding the current category)
+    if (
+      categories.some(
+        (cat) =>
+          cat.name.toLowerCase() === newName.toLowerCase() &&
+          cat.name !== editingCategory.name
+      )
+    ) {
+      setMessage({ text: "Category name already exists", type: "error" });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Update category in Firestore
+      await updateExpenseCategory(editingCategory.name, newName);
+
+      // Update local state
+      const updatedCategories = [...categories];
+      const categoryIndex = updatedCategories.findIndex(
+        (cat) => cat.name === editingCategory.name
+      );
+
+      if (categoryIndex !== -1) {
+        // Update the category name
+        updatedCategories[categoryIndex].name = newName;
+
+        // Update category name in all expenses of this category
+        updatedCategories[categoryIndex].expenses = updatedCategories[
+          categoryIndex
+        ].expenses.map((expense) => ({
+          ...expense,
+          category: newName,
+        }));
+      }
+
+      setCategories(updatedCategories);
+      setEditingCategory(null);
+      setCategoryFormData({ name: "" });
+      setMessage({ text: "Category updated successfully!", type: "success" });
+    } catch (error) {
+      console.error("Failed to update category:", error);
+      setMessage({ text: `Error: ${error.message}`, type: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle deleting a category
+  const handleDeleteCategory = async () => {
+    if (!confirmDeleteCategory) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Delete category from Firestore
+      await deleteExpenseCategory(confirmDeleteCategory.name);
+
+      // Update local state
+      const updatedCategories = categories.filter(
+        (cat) => cat.name !== confirmDeleteCategory.name
+      );
+
+      setCategories(updatedCategories);
+      setConfirmDeleteCategory(null);
+      setMessage({ text: "Category deleted successfully!", type: "success" });
+    } catch (error) {
+      console.error("Failed to delete category:", error);
+      setMessage({ text: `Error: ${error.message}`, type: "error" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle adding an expense to a category
   const handleAddExpense = async (index) => {
     const amount = parseFloat(formData.amount);
@@ -150,13 +243,14 @@ function Expenses() {
       const categoryIndex = categories.findIndex(
         (cat) => cat.name === editingExpense.categoryName
       );
-      
+
       if (categoryIndex === -1) {
         throw new Error("Category not found");
       }
-      
-      const originalExpense = categories[categoryIndex].expenses[editingExpense.index];
-      
+
+      const originalExpense =
+        categories[categoryIndex].expenses[editingExpense.index];
+
       // Create updated expense data
       const updatedExpenseData = {
         amount,
@@ -200,14 +294,15 @@ function Expenses() {
       const categoryIndex = categories.findIndex(
         (cat) => cat.name === confirmDeleteExpense.categoryName
       );
-      
+
       if (categoryIndex === -1) {
         throw new Error("Category not found");
       }
-      
+
       // Get the expense to delete
-      const expenseToDelete = categories[categoryIndex].expenses[confirmDeleteExpense.index];
-      
+      const expenseToDelete =
+        categories[categoryIndex].expenses[confirmDeleteExpense.index];
+
       // Delete from Firestore with new function signature
       const success = await deleteExpense(expenseToDelete);
 
@@ -247,7 +342,7 @@ function Expenses() {
   const openEditModal = (categoryName, expenseIndex) => {
     const categoryData = categories.find((cat) => cat.name === categoryName);
     if (!categoryData) return;
-    
+
     const expense = categoryData.expenses[expenseIndex];
     if (!expense) return;
 
@@ -266,8 +361,44 @@ function Expenses() {
     setOpenMenuIndex(null);
   };
 
+  // Open edit modal for a category
+  const openCategoryEditModal = (categoryName) => {
+    setEditingCategory({
+      name: categoryName,
+    });
+
+    setCategoryFormData({
+      name: categoryName,
+    });
+
+    // Close any open menus
+    setOpenCategoryMenuIndex(null);
+  };
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        !event.target.closest(".category-menu") &&
+        !event.target.closest(".expense-menu") &&
+        !event.target.closest(".category-form") &&
+        !event.target.closest(".expense-form")
+      ) {
+        setOpenCategoryMenuIndex(null);
+        setOpenMenuIndex(null);
+        setEditingCategory(null);
+        setEditingExpense(null);
+        setConfirmDeleteCategory(null);
+        setConfirmDeleteExpense(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="space-y-6 p-4 md:p-6 max-w-4xl mx-auto m-20 mt-2">
       {message.text && (
         <div
           className={`p-3 rounded-lg text-center transition-opacity duration-300 ${
@@ -288,9 +419,7 @@ function Expenses() {
 
       {user && (
         <>
-           
-
-           <div className="flex flex-col items-center py-4">
+          <div className="flex flex-col items-center py-4">
             <div className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-1">
               Total Expense:
             </div>
@@ -349,12 +478,71 @@ function Expenses() {
                 <h3 className="text-2xl font-bold text-gray-800">
                   {category.name}
                 </h3>
-                <span
-                  className="font-bold text-2xl"
-                  style={{ color: "#7295f6" }}
-                >
-                  ₹{getCategoryTotal(category.expenses).toFixed(2)}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span
+                    className="font-bold text-2xl"
+                    style={{ color: "#7295f6" }}
+                  >
+                    ₹{getCategoryTotal(category.expenses).toFixed(2)}
+                  </span>
+
+                  {/* Category Options Button */}
+                  <div className="relative">
+                    <button
+                      onClick={() =>
+                        setOpenCategoryMenuIndex(
+                          openCategoryMenuIndex === categoryIndex
+                            ? null
+                            : categoryIndex
+                        )
+                      }
+                      className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                      aria-label="Category Options"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                      </svg>
+                    </button>
+
+                    {openCategoryMenuIndex === categoryIndex && (
+                      <div className="absolute right-0 mt-2 w-36 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+                        <div
+                          className="py-1"
+                          role="menu"
+                          aria-orientation="vertical"
+                        >
+                          <button
+                            onClick={() => {
+                              openCategoryEditModal(category.name);
+                              setOpenCategoryMenuIndex(null);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                            role="menuitem"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfirmDeleteCategory({
+                                name: category.name,
+                              });
+                              setOpenCategoryMenuIndex(null);
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 hover:text-red-800"
+                            role="menuitem"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {category.expenses.length === 0 ? (
@@ -365,81 +553,82 @@ function Expenses() {
                 <ul className="text-base text-gray-700 space-y-2">
                   {category.expenses.map((expense, expenseIndex) => (
                     <li
-                    key={expenseIndex}
-                    className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 relative"
-                  >
-                    {/* Left side: Remark */}
-                    <span>{expense.remark || "No remark"}</span>
-                  
-                    {/* Right side: Amount and Options button */}
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className="font-medium"
-                        style={{ color: "#7295f6" }}
-                      >
-                        ₹
-                        {expense.amount && !isNaN(expense.amount)
-                          ? Number(expense.amount).toFixed(2)
-                          : "0.00"}
-                      </span>
-                  
-                      <button
-                        onClick={() =>
-                          setOpenMenuIndex(
-                            openMenuIndex === `${categoryIndex}-${expenseIndex}`
-                              ? null
-                              : `${categoryIndex}-${expenseIndex}`
-                          )
-                        }
-                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none"
-                        aria-label="Options"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+                      key={expenseIndex}
+                      className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 relative"
+                    >
+                      {/* Left side: Remark */}
+                      <span>{expense.remark || "No remark"}</span>
+
+                      {/* Right side: Amount and Options button */}
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className="font-medium"
+                          style={{ color: "#7295f6" }}
                         >
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                  
-                      {openMenuIndex === `${categoryIndex}-${expenseIndex}` && (
-                        <div className="absolute right-0 mt-2 w-28 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
-                          <div
-                            className="py-1"
-                            role="menu"
-                            aria-orientation="vertical"
+                          ₹
+                          {expense.amount && !isNaN(expense.amount)
+                            ? Number(expense.amount).toFixed(2)
+                            : "0.00"}
+                        </span>
+
+                        <button
+                          onClick={() =>
+                            setOpenMenuIndex(
+                              openMenuIndex ===
+                                `${categoryIndex}-${expenseIndex}`
+                                ? null
+                                : `${categoryIndex}-${expenseIndex}`
+                            )
+                          }
+                          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                          aria-label="Options"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
                           >
-                            <button
-                              onClick={() => {
-                                openEditModal(category.name, expenseIndex);
-                                setOpenMenuIndex(null);
-                              }}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              role="menuitem"
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                          </svg>
+                        </button>
+
+                        {openMenuIndex ===
+                          `${categoryIndex}-${expenseIndex}` && (
+                          <div className="absolute right-0 mt-2 w-28 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+                            <div
+                              className="py-1"
+                              role="menu"
+                              aria-orientation="vertical"
                             >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => {
-                                setConfirmDeleteExpense({
-                                  categoryName: category.name,
-                                  index: expenseIndex,
-                                });
-                                setOpenMenuIndex(null);
-                              }}
-                              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 hover:text-red-800"
-                              role="menuitem"
-                            >
-                              Delete
-                            </button>
+                              <button
+                                onClick={() => {
+                                  openEditModal(category.name, expenseIndex);
+                                  setOpenMenuIndex(null);
+                                }}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                role="menuitem"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setConfirmDeleteExpense({
+                                    categoryName: category.name,
+                                    index: expenseIndex,
+                                  });
+                                  setOpenMenuIndex(null);
+                                }}
+                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100 hover:text-red-800"
+                                role="menuitem"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </li>
-                  
+                        )}
+                      </div>
+                    </li>
                   ))}
                 </ul>
               )}
@@ -584,7 +773,48 @@ function Expenses() {
                 </div>
               )}
 
-              {/* Delete Confirmation Modal */}
+              {/* Edit Category Modal */}
+              {editingCategory && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4">
+                  <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl space-y-4">
+                    <h4 className="text-xl font-semibold text-gray-800">
+                      Edit Category
+                    </h4>
+                    <input
+                      type="text"
+                      placeholder="Category name"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-[#7295f6] focus:border-transparent"
+                      value={categoryFormData.name}
+                      onChange={(e) =>
+                        setCategoryFormData({ name: e.target.value })
+                      }
+                    />
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        onClick={() => setEditingCategory(null)}
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-base font-medium transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleEditCategory}
+                        style={{ backgroundColor: "#7295f6" }}
+                        className={`px-4 py-2 text-white rounded-lg text-base font-medium transition-colors ${
+                          isSubmitting
+                            ? "cursor-not-allowed opacity-75"
+                            : "hover:opacity-90"
+                        }`}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Updating..." : "Update Category"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete Expense Confirmation Modal */}
               {confirmDeleteExpense && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                   <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl space-y-4">
@@ -605,6 +835,42 @@ function Expenses() {
                       </button>
                       <button
                         onClick={handleDeleteExpense}
+                        className={`px-4 py-2 ${
+                          isSubmitting
+                            ? "bg-red-400 cursor-not-allowed"
+                            : "bg-red-600 hover:bg-red-700"
+                        } text-white rounded-lg text-base font-medium transition-colors`}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Delete Category Confirmation Modal */}
+              {confirmDeleteCategory && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                  <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow-2xl space-y-4">
+                    <h4 className="text-xl font-semibold text-red-600">
+                      Delete Category
+                    </h4>
+                    <p className="text-gray-600">
+                      Are you sure you want to delete the category "
+                      {confirmDeleteCategory.name}"? This will also delete all
+                      expenses in this category. This action cannot be undone.
+                    </p>
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        onClick={() => setConfirmDeleteCategory(null)}
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-base font-medium transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDeleteCategory}
                         className={`px-4 py-2 ${
                           isSubmitting
                             ? "bg-red-400 cursor-not-allowed"

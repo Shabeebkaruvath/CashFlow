@@ -8,6 +8,7 @@ import UserProfile from "./settings/Profile";
 import InitialBankBalance from "./settings/InitialBB";
 import DayRecordChecker from "./settings/Dailydata";
 import CategoryRecords from "./settings/Categories";
+import HistoricalData from "./settings/HistoricalData";
 import LogoutConfirm from "./settings/Logout";
  
 
@@ -56,6 +57,13 @@ export default function Settings() {
       path: "categories",
       icon: "category",
       description: "Customize expense and income categories",
+    },
+    
+    {
+      name: "Historical Data",
+      path: "history-data",
+      icon: "history",
+      description: "Add past income and expense entries",
     },
      
     {
